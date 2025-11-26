@@ -29,9 +29,21 @@ jobs:
       run: |
         $version = Get-Date -Format "yyyyMMdd-HHmmss"
         $packageName = "AutoDaily-$version"
-        New-Item -ItemType Directory -Path "release" -Force
-        Copy-Item "AutoDaily\bin\Release\*" -Destination "release\$packageName\" -Recurse -Exclude "*.pdb"
-        Compress-Archive -Path "release\$packageName\*" -DestinationPath "release\$packageName.zip" -Force
+        $releaseDir = "release"
+        $packageDir = Join-Path $releaseDir $packageName
+        New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+        $sourcePath = "AutoDaily\bin\Release"
+        if (Test-Path $sourcePath) {
+          Get-ChildItem -Path $sourcePath -Exclude "*.pdb" | Copy-Item -Destination $packageDir -Recurse -Force
+          $zipPath = "$releaseDir\$packageName.zip"
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+          Compress-Archive -Path "$packageDir\*" -DestinationPath $zipPath -Force
+        } else {
+          Write-Error "Source path not found: $sourcePath"
+          exit 1
+        }
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
