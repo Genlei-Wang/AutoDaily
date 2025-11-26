@@ -18,7 +18,7 @@ namespace AutoDaily.Core.Engine
 
         public bool IsRunning { get; private set; }
 
-        public async Task RunAsync(TaskModel task, CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task RunAsync(TaskModel task, CancellationToken cancellationToken)
         {
             if (IsRunning)
                 return;
@@ -28,7 +28,7 @@ namespace AutoDaily.Core.Engine
 
             try
             {
-                await Task.Run(() => ExecuteTask(task, _cancellationTokenSource.Token));
+                await System.Threading.Tasks.Task.Run(() => ExecuteTask(task, _cancellationTokenSource.Token));
             }
             finally
             {
