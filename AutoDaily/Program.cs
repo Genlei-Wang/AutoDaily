@@ -25,7 +25,6 @@ namespace AutoDaily
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
 
             try
             {

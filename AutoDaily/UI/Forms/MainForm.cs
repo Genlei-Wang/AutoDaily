@@ -312,7 +312,7 @@ namespace AutoDaily.UI.Forms
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(() =>
+                Invoke(new System.Action(() =>
                 {
                     var task = _taskService.GetCurrentTask();
                     task.Actions = actions;
@@ -431,7 +431,7 @@ namespace AutoDaily.UI.Forms
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(() => StartRunning()));
+                Invoke(new System.Action(() => StartRunning()));
             }
             else
             {

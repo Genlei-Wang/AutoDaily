@@ -131,7 +131,7 @@ namespace AutoDaily.Core.Engine
 
                     if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
                     {
-                        AddAction(new Action
+                        AddAction(new ActionModel
                         {
                             Type = "MouseClick",
                             X = relX,
@@ -143,7 +143,7 @@ namespace AutoDaily.Core.Engine
                     }
                     else if (wParam == (IntPtr)User32.WM_RBUTTONDOWN)
                     {
-                        AddAction(new Action
+                        AddAction(new ActionModel
                         {
                             Type = "MouseClick",
                             X = relX,
@@ -194,7 +194,7 @@ namespace AutoDaily.Core.Engine
                 }
                 else if (timeSinceLast > 100)
                 {
-                    _actions.Add(new Action
+                    _actions.Add(new ActionModel
                     {
                         Type = "Wait",
                         Param = (int)timeSinceLast
@@ -203,7 +203,7 @@ namespace AutoDaily.Core.Engine
             }
             else if ((DateTime.Now - _lastActionTime).TotalMilliseconds > 100)
             {
-                _actions.Add(new Action
+                _actions.Add(new ActionModel
                 {
                     Type = "Wait",
                     Param = (int)(DateTime.Now - _lastActionTime).TotalMilliseconds
