@@ -22,7 +22,7 @@ jobs:
       run: msbuild AutoDaily.sln /t:Restore /p:Configuration=Release
       
     - name: Build
-      run: msbuild AutoDaily.sln /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=bin\Release\
+      run: msbuild AutoDaily.sln /p:Configuration=Release /p:Platform="Any CPU"
       
     - name: Create Release Package
       shell: powershell
@@ -32,16 +32,32 @@ jobs:
         $releaseDir = "release"
         $packageDir = Join-Path $releaseDir $packageName
         New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
-        $sourcePath = "AutoDaily\bin\Release"
-        if (Test-Path $sourcePath) {
-          Get-ChildItem -Path $sourcePath -Exclude "*.pdb" | Copy-Item -Destination $packageDir -Recurse -Force
+        
+        # 查找编译输出文件
+        $sourcePaths = @("AutoDaily\bin\Release", "AutoDaily\bin\Release\net472")
+        $sourcePath = $null
+        foreach ($path in $sourcePaths) {
+          if (Test-Path $path) {
+            $exeFile = Get-ChildItem -Path $path -Filter "AutoDaily.exe" -ErrorAction SilentlyContinue
+            if ($exeFile) {
+              $sourcePath = $path
+              break
+            }
+          }
+        }
+        
+        if ($sourcePath) {
+          Write-Host "Found source path: $sourcePath"
+          Get-ChildItem -Path $sourcePath -Exclude "*.pdb","*.xml" | Copy-Item -Destination $packageDir -Recurse -Force
           $zipPath = "$releaseDir\$packageName.zip"
           if (Test-Path $zipPath) {
             Remove-Item $zipPath -Force
           }
           Compress-Archive -Path "$packageDir\*" -DestinationPath $zipPath -Force
+          Write-Host "Package created: $zipPath"
         } else {
-          Write-Error "Source path not found: $sourcePath"
+          Write-Error "AutoDaily.exe not found in expected locations"
+          Get-ChildItem -Path "AutoDaily" -Recurse -Filter "*.exe" | ForEach-Object { Write-Host "Found: $($_.FullName)" }
           exit 1
         }
         
