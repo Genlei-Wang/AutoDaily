@@ -28,7 +28,8 @@ namespace AutoDaily.UI.Forms
             StartPosition = FormStartPosition.Manual;
             TopMost = true;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(240, 50, 50, 50);
+            BackColor = Color.FromArgb(50, 50, 50); // 不透明背景
+            TransparencyKey = Color.FromArgb(1, 1, 1); // 使用透明度键实现半透明效果
             Size = new Size(400, 60);
             Location = new Point(
                 (Screen.PrimaryScreen.WorkingArea.Width - Width) / 2,
@@ -37,6 +38,9 @@ namespace AutoDaily.UI.Forms
             // 圆角窗口
             Region = System.Drawing.Region.FromHrgn(
                 CreateRoundRectRgn(0, 0, Width, Height, 15, 15));
+            
+            // 设置不透明背景，避免透明背景色错误
+            SetStyle(ControlStyles.SupportsTransparentBackColor, false);
 
             _statusLabel = new Label
             {

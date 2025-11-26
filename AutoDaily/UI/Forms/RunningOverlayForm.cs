@@ -26,8 +26,10 @@ namespace AutoDaily.UI.Forms
             WindowState = FormWindowState.Maximized;
             TopMost = true;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(25, 0, 0, 0); // 10% 透明度黑色遮罩
+            BackColor = Color.FromArgb(25, 25, 25); // 深灰色，不透明
+            Opacity = 0.1; // 使用 Opacity 实现透明度
             StartPosition = FormStartPosition.CenterScreen;
+            SetStyle(ControlStyles.SupportsTransparentBackColor, false);
 
             // 中央HUD面板
             var panel = new Panel
