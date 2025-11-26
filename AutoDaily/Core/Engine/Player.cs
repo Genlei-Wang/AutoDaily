@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoDaily.Core.Models;
 using AutoDaily.Core.Native;
+using TaskModel = AutoDaily.Core.Models.Task;
+using ActionModel = AutoDaily.Core.Models.Action;
 
 namespace AutoDaily.Core.Engine
 {
@@ -16,7 +18,7 @@ namespace AutoDaily.Core.Engine
 
         public bool IsRunning { get; private set; }
 
-        public async Task RunAsync(Task task, CancellationToken cancellationToken)
+        public async Task RunAsync(TaskModel task, CancellationToken cancellationToken)
         {
             if (IsRunning)
                 return;
@@ -34,7 +36,7 @@ namespace AutoDaily.Core.Engine
             }
         }
 
-        private void ExecuteTask(Task task, CancellationToken token)
+        private void ExecuteTask(TaskModel task, CancellationToken token)
         {
             // 1. 查找目标窗口
             IntPtr hwnd = FindTargetWindow(task.TargetWindow);
@@ -116,7 +118,7 @@ namespace AutoDaily.Core.Engine
             }
         }
 
-        private void ExecuteAction(Action action, IntPtr hwnd, CancellationToken token)
+        private void ExecuteAction(ActionModel action, IntPtr hwnd, CancellationToken token)
         {
             switch (action.Type)
             {
@@ -138,7 +140,7 @@ namespace AutoDaily.Core.Engine
             }
         }
 
-        private void PerformMouseClick(Action action, IntPtr hwnd)
+        private void PerformMouseClick(ActionModel action, IntPtr hwnd)
         {
             User32.GetWindowRect(hwnd, out var rect);
             
@@ -203,7 +205,7 @@ namespace AutoDaily.Core.Engine
             Thread.Sleep(100);
         }
 
-        private void PerformMouseMove(Action action, IntPtr hwnd)
+        private void PerformMouseMove(ActionModel action, IntPtr hwnd)
         {
             User32.GetWindowRect(hwnd, out var rect);
             

@@ -76,7 +76,7 @@ namespace AutoDaily.Core.Native
         public const uint SWP_NOMOVE = 0x0002;
         public const uint SWP_NOSIZE = 0x0001;
         public const uint SWP_SHOWWINDOW = 0x0040;
-        public const IntPtr HWND_TOP = new IntPtr(0);
+        public static readonly IntPtr HWND_TOP = new IntPtr(0);
 
         public const int WH_MOUSE_LL = 14;
         public const int WH_KEYBOARD_LL = 13;

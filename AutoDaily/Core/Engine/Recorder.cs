@@ -6,6 +6,7 @@ using System.Text;
 using System.Windows.Forms;
 using AutoDaily.Core.Models;
 using AutoDaily.Core.Native;
+using ActionModel = AutoDaily.Core.Models.Action;
 
 namespace AutoDaily.Core.Engine
 {
@@ -15,13 +16,13 @@ namespace AutoDaily.Core.Engine
         private IntPtr _keyboardHook = IntPtr.Zero;
         private User32.LowLevelProc _mouseProc;
         private User32.LowLevelProc _keyboardProc;
-        private List<Action> _actions = new List<Action>();
+        private List<ActionModel> _actions = new List<ActionModel>();
         private DateTime _lastActionTime = DateTime.Now;
         private const int DEBOUNCE_MS = 50;
         private bool _isRecording = false;
         private WindowInfo _targetWindow;
 
-        public event Action<List<Action>, WindowInfo> OnRecordingComplete;
+        public event System.Action<List<ActionModel>, WindowInfo> OnRecordingComplete;
         public event Action<string> OnStatusUpdate;
 
         public bool IsRecording => _isRecording;
@@ -179,7 +180,7 @@ namespace AutoDaily.Core.Engine
             return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
 
-        private void AddAction(Action action)
+        private void AddAction(ActionModel action)
         {
             // 如果上一个动作是Wait且时间很短，合并
             if (_actions.Count > 0)

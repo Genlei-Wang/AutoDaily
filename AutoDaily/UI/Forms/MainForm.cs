@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -307,7 +308,7 @@ namespace AutoDaily.UI.Forms
             UpdateRunButtonState();
         }
 
-        private void Recorder_OnRecordingComplete(List<Action> actions, WindowInfo windowInfo)
+        private void Recorder_OnRecordingComplete(List<AutoDaily.Core.Models.Action> actions, WindowInfo windowInfo)
         {
             if (InvokeRequired)
             {
@@ -426,7 +427,7 @@ namespace AutoDaily.UI.Forms
             UpdateNextRunTime();
         }
 
-        private void OnScheduledTaskTriggered(Task task)
+        private void OnScheduledTaskTriggered(AutoDaily.Core.Models.Task task)
         {
             if (InvokeRequired)
             {
