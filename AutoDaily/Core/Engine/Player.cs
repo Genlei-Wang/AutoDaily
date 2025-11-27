@@ -47,7 +47,10 @@ namespace AutoDaily.Core.Engine
             }
 
             // 2. 调整窗口大小和位置
-            AdjustWindow(hwnd, task.TargetWindow.Rect);
+            if (task.TargetWindow?.Rect != null)
+            {
+                AdjustWindow(hwnd, task.TargetWindow.Rect);
+            }
 
             // 3. 激活窗口
             User32.ShowWindow(hwnd, User32.SW_RESTORE);

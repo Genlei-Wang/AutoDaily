@@ -80,15 +80,19 @@ namespace AutoDaily.Core.Engine
             var hwnd = User32.GetForegroundWindow();
             if (hwnd != IntPtr.Zero)
             {
-                User32.GetWindowRect(hwnd, out var rect);
-                _targetWindow = new WindowInfo
+                if (_targetWindow == null)
                 {
-                    Rect = new WindowRect
-                    {
-                        Width = rect.Right - rect.Left,
-                        Height = rect.Bottom - rect.Top
-                    }
-                };
+                    _targetWindow = new WindowInfo();
+                }
+                
+                User32.GetWindowRect(hwnd, out var rect);
+                if (_targetWindow.Rect == null)
+                {
+                    _targetWindow.Rect = new WindowRect();
+                }
+                
+                _targetWindow.Rect.Width = rect.Right - rect.Left;
+                _targetWindow.Rect.Height = rect.Bottom - rect.Top;
 
                 // 获取窗口标题
                 int length = User32.GetWindowTextLength(hwnd);
