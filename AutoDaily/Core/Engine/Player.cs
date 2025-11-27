@@ -55,6 +55,12 @@ namespace AutoDaily.Core.Engine
             Thread.Sleep(500); // 等待窗口激活
 
             // 4. 执行动作序列
+            if (task.Actions == null || task.Actions.Count == 0)
+            {
+                OnStatusUpdate?.Invoke("错误：没有录制的动作");
+                return;
+            }
+
             int totalActions = task.Actions.Count;
             for (int i = 0; i < task.Actions.Count; i++)
             {
@@ -65,6 +71,9 @@ namespace AutoDaily.Core.Engine
                 }
 
                 var action = task.Actions[i];
+                if (action == null)
+                    continue;
+
                 OnProgressUpdate?.Invoke(i + 1, totalActions);
                 OnStatusUpdate?.Invoke($"执行步骤 {i + 1}/{totalActions}: {action.Type}");
 

@@ -67,7 +67,7 @@ namespace AutoDaily.UI.Forms
                 Location = new Point(200, 15),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
-                BackColor = Color.Transparent,
+                BackColor = Color.FromArgb(50, 50, 50), // 不透明背景
                 Cursor = Cursors.Hand
             };
             _pauseButton.FlatAppearance.BorderSize = 0;
@@ -80,7 +80,7 @@ namespace AutoDaily.UI.Forms
                 Location = new Point(280, 15),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
-                BackColor = Color.Transparent,
+                BackColor = Color.FromArgb(50, 50, 50), // 不透明背景
                 Cursor = Cursors.Hand
             };
             _stopButton.FlatAppearance.BorderSize = 0;

@@ -114,7 +114,7 @@ namespace AutoDaily.UI.Forms
             
             if (InvokeRequired)
             {
-                Invoke(new Action(() =>
+                Invoke(new System.Action(() =>
                 {
                     _statusLabel.Text = $"步骤: {status} ({current}/{total})";
                     _progressBar.Maximum = total;
@@ -133,7 +133,7 @@ namespace AutoDaily.UI.Forms
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(() => _statusLabel.Text = status));
+                Invoke(new System.Action(() => _statusLabel.Text = status));
             }
             else
             {
