@@ -23,22 +23,39 @@ namespace AutoDaily.UI.Forms
         private void InitializeComponent()
         {
             FormBorderStyle = FormBorderStyle.None;
-            WindowState = FormWindowState.Maximized;
+            // 改为小窗口，不遮挡屏幕
+            Size = new Size(350, 180);
             TopMost = true;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(25, 25, 25); // 深灰色，不透明
-            Opacity = 0.1; // 使用 Opacity 实现透明度
-            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = Color.FromArgb(240, 240, 240);
+            StartPosition = FormStartPosition.Manual;
+            Location = new Point(
+                Screen.PrimaryScreen.WorkingArea.Right - Width - 20,
+                Screen.PrimaryScreen.WorkingArea.Top + 20);
             SetStyle(ControlStyles.SupportsTransparentBackColor, false);
+            
+            // 添加关闭按钮
+            var closeButton = new Button
+            {
+                Text = "×",
+                Size = new Size(30, 30),
+                Location = new Point(Width - 35, 5),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.Black,
+                BackColor = Color.Transparent,
+                Font = new Font("Arial", 16, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            closeButton.FlatAppearance.BorderSize = 0;
+            closeButton.Click += (s, e) => Close();
+            Controls.Add(closeButton);
 
-            // 中央HUD面板
+            // HUD面板（小窗口）
             var panel = new Panel
             {
-                Size = new Size(400, 250),
-                Location = new Point(
-                    (Screen.PrimaryScreen.WorkingArea.Width - 400) / 2,
-                    (Screen.PrimaryScreen.WorkingArea.Height - 250) / 2),
-                BackColor = Color.FromArgb(250, 255, 255, 255)
+                Size = new Size(Width - 10, Height - 40),
+                Location = new Point(5, 35),
+                BackColor = Color.White
             };
 
             // 圆角
@@ -53,48 +70,48 @@ namespace AutoDaily.UI.Forms
 
             _titleLabel = new Label
             {
-                Text = "🤖 正在干活...",
-                Font = new Font("Microsoft YaHei", 16, FontStyle.Bold),
+                Text = "🤖 正在运行",
+                Font = new Font("Microsoft YaHei", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
-                Location = new Point(20, 20),
-                Size = new Size(360, 30),
+                Location = new Point(10, 10),
+                Size = new Size(panel.Width - 20, 25),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _statusLabel = new Label
             {
-                Text = "步骤: 准备中...",
-                Font = new Font("Microsoft YaHei", 11),
+                Text = "准备中...",
+                Font = new Font("Microsoft YaHei", 9),
                 ForeColor = Color.FromArgb(60, 60, 60),
-                Location = new Point(20, 70),
-                Size = new Size(360, 25),
+                Location = new Point(10, 40),
+                Size = new Size(panel.Width - 20, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _progressBar = new ProgressBar
             {
-                Location = new Point(30, 110),
-                Size = new Size(340, 25),
+                Location = new Point(10, 65),
+                Size = new Size(panel.Width - 20, 20),
                 Style = ProgressBarStyle.Continuous
             };
 
             _warningLabel = new Label
             {
-                Text = "⚠️ 请勿触碰鼠标键盘",
-                Font = new Font("Microsoft YaHei", 10),
+                Text = "按 F12 停止",
+                Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(255, 152, 0),
-                Location = new Point(20, 150),
-                Size = new Size(360, 25),
+                Location = new Point(10, 90),
+                Size = new Size(panel.Width - 20, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _stopHintLabel = new Label
             {
-                Text = "[ 按 F12 紧急停止 ]",
-                Font = new Font("Microsoft YaHei", 9),
+                Text = "或点击右上角 × 关闭",
+                Font = new Font("Microsoft YaHei", 7),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(20, 180),
-                Size = new Size(360, 25),
+                Location = new Point(10, 110),
+                Size = new Size(panel.Width - 20, 15),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 

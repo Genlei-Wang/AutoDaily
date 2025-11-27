@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Timers;
-using Microsoft.Win32;
 using AutoDaily.Core.Models;
 
 namespace AutoDaily.Core.Services
@@ -11,35 +10,19 @@ namespace AutoDaily.Core.Services
         private Timer _timer;
         private TaskService _taskService;
         private Action<Task> _onTaskTriggered;
-        private bool _isScreenLocked = false;
 
         public ScheduleService(TaskService taskService, Action<Task> onTaskTriggered)
         {
             _taskService = taskService;
             _onTaskTriggered = onTaskTriggered;
 
-            // 监听系统事件
-            SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+            // 不再监听解锁事件（按用户要求移除）
 
             // 启动定时器，每30秒检查一次
             _timer = new Timer(30000); // 30秒
             _timer.Elapsed += Timer_Elapsed;
             _timer.AutoReset = true;
             _timer.Start();
-        }
-
-        private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
-        {
-            if (e.Reason == SessionSwitchReason.SessionUnlock)
-            {
-                _isScreenLocked = false;
-                // 解锁后立即检查是否有待执行的任务
-                CheckSchedule();
-            }
-            else if (e.Reason == SessionSwitchReason.SessionLock)
-            {
-                _isScreenLocked = true;
-            }
         }
 
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -49,9 +32,6 @@ namespace AutoDaily.Core.Services
 
         private void CheckSchedule()
         {
-            if (_isScreenLocked)
-                return;
-
             var task = _taskService.GetCurrentTask();
             if (!task.Schedule.Enabled)
                 return;
@@ -93,7 +73,7 @@ namespace AutoDaily.Core.Services
         {
             _timer?.Stop();
             _timer?.Dispose();
-            SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+            // 不再需要取消事件订阅
         }
     }
 }

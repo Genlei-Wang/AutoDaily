@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoDaily.Core.Models;
 using AutoDaily.Core.Native;
+using AutoDaily.Core.Services;
 using TaskModel = AutoDaily.Core.Models.Task;
 using ActionModel = AutoDaily.Core.Models.Action;
 
@@ -79,6 +80,9 @@ namespace AutoDaily.Core.Engine
 
                 OnProgressUpdate?.Invoke(i + 1, totalActions);
                 OnStatusUpdate?.Invoke($"执行步骤 {i + 1}/{totalActions}: {action.Type}");
+                
+                // 记录屏幕操作
+                LogService.LogScreenAction($"{action.Type} (X:{action.X}, Y:{action.Y})", i + 1);
 
                 ExecuteAction(action, hwnd, token);
             }
@@ -168,8 +172,13 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            // 移动鼠标
-            User32.SetCursorPos(screenX, screenY);
+            // 验证坐标在屏幕范围内
+            var screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+            screenX = Math.Max(0, Math.Min(screenX, screenBounds.Width - 1));
+            screenY = Math.Max(0, Math.Min(screenY, screenBounds.Height - 1));
+
+            // 平滑移动鼠标（参考TinyTask的实现）
+            SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
 
             // 执行点击
@@ -233,8 +242,45 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            User32.SetCursorPos(screenX, screenY);
+            // 验证坐标在屏幕范围内
+            var screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+            screenX = Math.Max(0, Math.Min(screenX, screenBounds.Width - 1));
+            screenY = Math.Max(0, Math.Min(screenY, screenBounds.Height - 1));
+
+            // 平滑移动鼠标
+            SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
+        }
+
+        private void SmoothMoveMouse(int targetX, int targetY)
+        {
+            // 获取当前鼠标位置
+            User32.GetCursorPos(out var currentPoint);
+            int currentX = currentPoint.X;
+            int currentY = currentPoint.Y;
+
+            // 计算距离
+            int dx = targetX - currentX;
+            int dy = targetY - currentY;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+
+            // 如果距离很小，直接移动
+            if (distance < 5)
+            {
+                User32.SetCursorPos(targetX, targetY);
+                return;
+            }
+
+            // 平滑移动：分多步移动（参考TinyTask）
+            int steps = Math.Max(5, (int)(distance / 10)); // 每10像素一步
+            for (int i = 1; i <= steps; i++)
+            {
+                double ratio = (double)i / steps;
+                int x = currentX + (int)(dx * ratio);
+                int y = currentY + (int)(dy * ratio);
+                User32.SetCursorPos(x, y);
+                Thread.Sleep(5); // 每步间隔5ms，实现平滑效果
+            }
         }
 
         private void PerformInput(string text)

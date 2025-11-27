@@ -271,6 +271,7 @@ namespace AutoDaily.UI.Forms
             }
             else
             {
+                LogService.LogUserAction("开始录制");
                 StartRecording();
             }
         }
@@ -305,6 +306,7 @@ namespace AutoDaily.UI.Forms
             _overlayForm = null;
 
             _recorder.StopRecording();
+            LogService.LogUserAction("停止录制");
             UpdateRunButtonState();
         }
 
@@ -354,6 +356,8 @@ namespace AutoDaily.UI.Forms
             _runButton.Enabled = false;
             _recordButton.Enabled = false;
 
+            LogService.LogUserAction("开始运行任务");
+
             _runningOverlay = new RunningOverlayForm();
             _runningOverlay.Show();
 
@@ -386,6 +390,7 @@ namespace AutoDaily.UI.Forms
 
         private void StopRunning()
         {
+            LogService.LogUserAction("用户停止运行（F12或关闭窗口）");
             _playerCancellationTokenSource?.Cancel();
         }
 
@@ -442,7 +447,17 @@ namespace AutoDaily.UI.Forms
         private void RegisterHotKey()
         {
             // 注册F12热键用于紧急停止
-            User32.RegisterHotKey(Handle, 1, User32.MOD_NONE, User32.VK_F12);
+            try
+            {
+                if (!User32.RegisterHotKey(Handle, 1, User32.MOD_NONE, User32.VK_F12))
+                {
+                    System.Diagnostics.Debug.WriteLine("F12热键注册失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"注册热键错误: {ex.Message}");
+            }
         }
 
         protected override void WndProc(ref Message m)
@@ -454,8 +469,20 @@ namespace AutoDaily.UI.Forms
                 {
                     StopRunning();
                 }
+                return; // 处理了热键，不继续传递
             }
             base.WndProc(ref m);
+        }
+        
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // 也在这里处理F12，确保能响应
+            if (keyData == Keys.F12 && _isRunning)
+            {
+                StopRunning();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
