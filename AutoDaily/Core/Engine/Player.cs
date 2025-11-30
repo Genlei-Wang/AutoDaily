@@ -44,6 +44,15 @@ namespace AutoDaily.Core.Engine
             if (hwnd == IntPtr.Zero)
             {
                 OnStatusUpdate?.Invoke("错误：找不到目标窗口");
+                LogService.LogError("找不到目标窗口", null);
+                return;
+            }
+
+            // 验证窗口句柄有效
+            if (!User32.IsWindow(hwnd))
+            {
+                OnStatusUpdate?.Invoke("错误：目标窗口无效");
+                LogService.LogError("目标窗口无效", null);
                 return;
             }
 
@@ -57,6 +66,10 @@ namespace AutoDaily.Core.Engine
             User32.ShowWindow(hwnd, User32.SW_RESTORE);
             User32.SetForegroundWindow(hwnd);
             Thread.Sleep(500); // 等待窗口激活
+
+            // 再次验证窗口位置
+            User32.GetWindowRect(hwnd, out var windowRect);
+            LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={windowRect.Right - windowRect.Left}, Height={windowRect.Bottom - windowRect.Top}");
 
             // 4. 执行动作序列
             if (task.Actions == null || task.Actions.Count == 0)
@@ -78,11 +91,13 @@ namespace AutoDaily.Core.Engine
                 if (action == null)
                     continue;
 
-                OnProgressUpdate?.Invoke(i + 1, totalActions);
-                OnStatusUpdate?.Invoke($"执行步骤 {i + 1}/{totalActions}: {action.Type}");
+                // 严格按步骤更新进度
+                int currentStep = i + 1;
+                OnProgressUpdate?.Invoke(currentStep, totalActions);
+                OnStatusUpdate?.Invoke($"执行步骤 {currentStep}/{totalActions}: {action.Type}");
                 
                 // 记录屏幕操作
-                LogService.LogScreenAction($"{action.Type} (X:{action.X}, Y:{action.Y})", i + 1);
+                LogService.LogScreenAction($"{action.Type} (X:{action.X}, Y:{action.Y}, Relative:{action.Relative})", currentStep);
 
                 ExecuteAction(action, hwnd, token);
             }
@@ -158,24 +173,38 @@ namespace AutoDaily.Core.Engine
 
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)
         {
-            User32.GetWindowRect(hwnd, out var rect);
+            // 重新获取窗口位置（窗口可能移动了）
+            if (!User32.GetWindowRect(hwnd, out var rect))
+            {
+                LogService.LogError($"无法获取窗口位置，hwnd={hwnd}", null);
+                return;
+            }
             
             int screenX, screenY;
             if (action.Relative)
             {
                 screenX = rect.Left + action.X;
                 screenY = rect.Top + action.Y;
+                LogService.Log($"相对坐标转换: 窗口({rect.Left},{rect.Top}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
             }
             else
             {
                 screenX = action.X;
                 screenY = action.Y;
+                LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
             }
 
             // 验证坐标在屏幕范围内
             var screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+            int originalX = screenX;
+            int originalY = screenY;
             screenX = Math.Max(0, Math.Min(screenX, screenBounds.Width - 1));
             screenY = Math.Max(0, Math.Min(screenY, screenBounds.Height - 1));
+            
+            if (originalX != screenX || originalY != screenY)
+            {
+                LogService.LogWarning($"坐标被限制: ({originalX},{originalY}) -> ({screenX},{screenY})");
+            }
 
             // 平滑移动鼠标（参考TinyTask的实现）
             SmoothMoveMouse(screenX, screenY);
@@ -228,7 +257,11 @@ namespace AutoDaily.Core.Engine
 
         private void PerformMouseMove(ActionModel action, IntPtr hwnd)
         {
-            User32.GetWindowRect(hwnd, out var rect);
+            // 重新获取窗口位置
+            if (!User32.GetWindowRect(hwnd, out var rect))
+            {
+                return;
+            }
             
             int screenX, screenY;
             if (action.Relative)
