@@ -50,8 +50,8 @@ namespace AutoDaily.UI.Forms
         {
             this.AutoScaleMode = AutoScaleMode.Dpi; // 使用Dpi模式缩放，比Font模式更适合处理高分屏布局
             Text = "AutoDaily 日报助手";
-            Size = new Size(420, 280);
-            MinimumSize = new Size(420, 280);
+            Size = new Size(400, 600);
+            MinimumSize = new Size(400, 600);
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = true;
             MinimizeBox = true;
@@ -72,7 +72,7 @@ namespace AutoDaily.UI.Forms
             _operationCard = new Panel
             {
                 Location = new Point(20, 50),
-                Size = new Size(380, 100),
+                Size = new Size(360, 100),
                 BackColor = Color.White,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
@@ -142,7 +142,7 @@ namespace AutoDaily.UI.Forms
             _scheduleCard = new Panel
             {
                 Location = new Point(20, 160),
-                Size = new Size(380, 90),
+                Size = new Size(360, 90),
                 BackColor = Color.FromArgb(250, 250, 250),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
