@@ -251,6 +251,8 @@ namespace AutoDaily.Core.Engine
                 return;
             }
             
+            // 使用系统虚拟屏幕坐标 (Virtual Screen Coordinates)
+            // 如果开启了 SetProcessDPIAware，GetWindowRect 返回物理坐标
             int screenX, screenY;
             if (action.Relative)
             {
@@ -265,21 +267,28 @@ namespace AutoDaily.Core.Engine
                 LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
             }
 
-            // 验证坐标在屏幕范围内 (改为使用VirtualScreen以支持多显示器)
-            var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            int originalX = screenX;
-            int originalY = screenY;
+            // 验证坐标在屏幕范围内 (使用VirtualScreen以支持多显示器)
+            // 暂时移除强制限制，防止误伤多屏环境下的合法坐标
+            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            // ...
+
+            // 直接使用 SetCursorPos (物理坐标)
+            // 注意：SetCursorPos 接受屏幕坐标。如果启用了 DPI 感知，它就是物理像素。
+            User32.SetCursorPos(screenX, screenY);
             
-            // 仅当坐标完全在屏幕外时才限制，但在多屏环境下简单的限制可能也不对
-            // 这里放宽限制，信任GetWindowRect的结果
-            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
-            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
-            
-            // 平滑移动鼠标（参考TinyTask的实现）
-            SmoothMoveMouse(screenX, screenY);
+            // 等待鼠标移动到位
             Thread.Sleep(50);
             
-            // 执行点击
+            // 执行点击 - 使用 ABSOLUTE 模式确保 SendInput 不会受到相对移动的干扰
+            // 计算 0-65535 的归一化坐标
+            int vWidth = System.Windows.Forms.SystemInformation.VirtualScreen.Width;
+            int vHeight = System.Windows.Forms.SystemInformation.VirtualScreen.Height;
+            int vLeft = System.Windows.Forms.SystemInformation.VirtualScreen.Left;
+            int vTop = System.Windows.Forms.SystemInformation.VirtualScreen.Top;
+
+            int absX = (int)((double)(screenX - vLeft) * 65535 / vWidth);
+            int absY = (int)((double)(screenY - vTop) * 65535 / vHeight);
+
             var inputs = new User32.INPUT[2];
             
             // 按下
@@ -290,11 +299,11 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = 0,
-                        dy = 0,
-                        dwFlags = action.Button == "Left" 
-                            ? User32.MOUSEEVENTF_LEFTDOWN 
-                            : User32.MOUSEEVENTF_RIGHTDOWN,
+                        dx = absX,
+                        dy = absY,
+                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTDOWN : User32.MOUSEEVENTF_RIGHTDOWN) 
+                                  | User32.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF_MOVE | User32.MOUSEEVENTF_VIRTUALDESK,
+                        mouseData = 0,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -309,11 +318,11 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = 0,
-                        dy = 0,
-                        dwFlags = action.Button == "Left"
-                            ? User32.MOUSEEVENTF_LEFTUP
-                            : User32.MOUSEEVENTF_RIGHTUP,
+                        dx = absX,
+                        dy = absY,
+                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTUP : User32.MOUSEEVENTF_RIGHTUP) 
+                                  | User32.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF_MOVE | User32.MOUSEEVENTF_VIRTUALDESK,
+                        mouseData = 0,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -344,46 +353,15 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            // 验证坐标在屏幕范围内 (改为使用VirtualScreen)
-            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
-            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
-
-            // 平滑移动鼠标
-            SmoothMoveMouse(screenX, screenY);
-            Thread.Sleep(50);
+            // 直接移动鼠标 (无平滑插值，避免延迟和DPI问题)
+            // SmoothMoveMouse has been removed/replaced with direct SetCursorPos in PerformMouseClick
+            // For MouseMove event, we should also use direct SetCursorPos to be consistent.
+            User32.SetCursorPos(screenX, screenY);
+            Thread.Sleep(10);
         }
 
-        private void SmoothMoveMouse(int targetX, int targetY)
-        {
-            // 获取当前鼠标位置
-            User32.GetCursorPos(out var currentPoint);
-            int currentX = currentPoint.X;
-            int currentY = currentPoint.Y;
-
-            // 计算距离
-            int dx = targetX - currentX;
-            int dy = targetY - currentY;
-            double distance = Math.Sqrt(dx * dx + dy * dy);
-
-            // 如果距离很小，直接移动
-            if (distance < 5)
-            {
-                User32.SetCursorPos(targetX, targetY);
-                return;
-            }
-
-            // 平滑移动：分多步移动（参考TinyTask）
-            int steps = Math.Max(5, (int)(distance / 10)); // 每10像素一步
-            for (int i = 1; i <= steps; i++)
-            {
-                double ratio = (double)i / steps;
-                int x = currentX + (int)(dx * ratio);
-                int y = currentY + (int)(dy * ratio);
-                User32.SetCursorPos(x, y);
-                Thread.Sleep(5); // 每步间隔5ms，实现平滑效果
-            }
-        }
+        // SmoothMoveMouse removed to prevent DPI/Coordinate conflicts
+        // private void SmoothMoveMouse(int targetX, int targetY) { ... }
 
         private void PerformInput(string text)
         {

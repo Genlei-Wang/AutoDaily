@@ -100,10 +100,11 @@ namespace AutoDaily.Core.Engine
                     _targetWindow.Rect = new WindowRect();
                 }
                 
+                // 记录窗口Rect (包含非客户区)
                 _targetWindow.Rect.Width = rect.Right - rect.Left;
                 _targetWindow.Rect.Height = rect.Bottom - rect.Top;
 
-                // 获取窗口标题
+                // 记录窗口标题
                 int length = User32.GetWindowTextLength(hwnd);
                 if (length > 0)
                 {

@@ -72,7 +72,8 @@ namespace AutoDaily.UI.Forms
             {
                 Location = new Point(20, 50),
                 Size = new Size(380, 100),
-                BackColor = Color.White
+                BackColor = Color.White,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             DrawRoundedPanel(_operationCard, 8);
 
@@ -86,7 +87,8 @@ namespace AutoDaily.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(244, 67, 54),
                 BackColor = Color.White,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             _recordButton.FlatAppearance.BorderColor = Color.FromArgb(244, 67, 54);
             _recordButton.FlatAppearance.BorderSize = 2;
@@ -99,7 +101,8 @@ namespace AutoDaily.UI.Forms
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(20, 85),
-                AutoSize = true
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // 运行按钮
@@ -112,7 +115,8 @@ namespace AutoDaily.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(0, 122, 204), // #007ACC
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             _runButton.FlatAppearance.BorderSize = 0;
             _runButton.Click += RunButton_Click;
@@ -124,7 +128,8 @@ namespace AutoDaily.UI.Forms
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(200, 85),
-                AutoSize = true
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
             _operationCard.Controls.Add(_recordButton);
@@ -137,7 +142,8 @@ namespace AutoDaily.UI.Forms
             {
                 Location = new Point(20, 160),
                 Size = new Size(380, 90),
-                BackColor = Color.FromArgb(250, 250, 250)
+                BackColor = Color.FromArgb(250, 250, 250),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             DrawRoundedPanel(_scheduleCard, 8);
 
