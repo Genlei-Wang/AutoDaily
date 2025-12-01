@@ -48,9 +48,10 @@ namespace AutoDaily.UI.Forms
 
         private void InitializeComponent()
         {
+            this.AutoScaleMode = AutoScaleMode.Font; // 启用字体缩放，解决高DPI下界面太小的问题
             Text = "AutoDaily 日报助手";
             Size = new Size(420, 280);
-            MinimumSize = new Size(420, 280); // 防止窗口被压扁
+            MinimumSize = new Size(420, 280);
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = true;
             MinimizeBox = true;
