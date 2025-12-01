@@ -46,6 +46,11 @@ namespace AutoDaily.Core.Services
         {
             Log($"{message} {(ex != null ? ex.ToString() : "")}", LogLevel.Error);
         }
+        
+        public static void LogWarning(string message)
+        {
+            Log(message, LogLevel.Warning);
+        }
     }
 
     public enum LogLevel
