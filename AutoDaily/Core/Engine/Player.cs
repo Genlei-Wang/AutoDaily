@@ -182,7 +182,64 @@ namespace AutoDaily.Core.Engine
                 case "Input":
                     PerformInput(action.Text);
                     break;
+
+                case "MouseWheel":
+                    PerformMouseWheel(action);
+                    break;
+
+                case "KeyDown":
+                    PerformKey(action, false);
+                    break;
+
+                case "KeyUp":
+                    PerformKey(action, true);
+                    break;
             }
+        }
+
+        private void PerformMouseWheel(ActionModel action)
+        {
+             var inputs = new User32.INPUT[1];
+             inputs[0] = new User32.INPUT
+             {
+                 type = User32.INPUT_MOUSE,
+                 U = new User32.InputUnion
+                 {
+                     mi = new User32.MOUSEINPUT
+                     {
+                         dx = 0,
+                         dy = 0,
+                         mouseData = (uint)action.Param,
+                         dwFlags = User32.MOUSEEVENTF_WHEEL,
+                         time = 0,
+                         dwExtraInfo = IntPtr.Zero
+                     }
+                 }
+             };
+             User32.SendInput(1, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
+             Thread.Sleep(10);
+        }
+
+        private void PerformKey(ActionModel action, bool isUp)
+        {
+             var inputs = new User32.INPUT[1];
+             inputs[0] = new User32.INPUT
+             {
+                 type = User32.INPUT_KEYBOARD,
+                 U = new User32.InputUnion
+                 {
+                     ki = new User32.KEYBDINPUT
+                     {
+                         wVk = (ushort)action.Param,
+                         wScan = 0,
+                         dwFlags = isUp ? User32.KEYEVENTF_KEYUP : 0,
+                         time = 0,
+                         dwExtraInfo = IntPtr.Zero
+                     }
+                 }
+             };
+             User32.SendInput(1, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
+             Thread.Sleep(10);
         }
 
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)

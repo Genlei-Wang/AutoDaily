@@ -166,6 +166,22 @@ namespace AutoDaily.Core.Engine
                         });
                         _lastActionTime = DateTime.Now;
                     }
+                    else if (wParam == (IntPtr)User32.WM_MOUSEWHEEL)
+                    {
+                        // 获取滚轮数据 High Word
+                        int mouseData = Marshal.ReadInt32(lParam, 8); // offset 8 for mouseData in MSLLHOOKSTRUCT
+                        int delta = (short)((mouseData >> 16) & 0xFFFF);
+                        
+                        AddAction(new ActionModel
+                        {
+                            Type = "MouseWheel",
+                            X = relX,
+                            Y = relY,
+                            Relative = true,
+                            Param = delta
+                        });
+                        _lastActionTime = DateTime.Now;
+                    }
                 }
             }
 
@@ -176,17 +192,36 @@ namespace AutoDaily.Core.Engine
         {
             if (nCode >= 0 && _isRecording)
             {
-                // 只记录按键按下，忽略按键释放
+                // 记录按键按下和释放
                 if (wParam == (IntPtr)User32.WM_KEYDOWN || wParam == (IntPtr)User32.WM_SYSKEYDOWN)
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
                     
-                    // 忽略功能键（F1-F12等）
-                    if (vkCode >= 0x70 && vkCode <= 0x7B)
-                        return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                    // 忽略功能键 F10 (用于停止)
+                    if (vkCode == User32.VK_F10)
+                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
 
-                    // 这里简化处理：只记录可见字符输入
-                    // 实际应该记录完整的按键序列，但为了简化，我们主要依赖鼠标点击
+                    AddAction(new ActionModel
+                    {
+                        Type = "KeyDown",
+                        Param = vkCode
+                    });
+                    _lastActionTime = DateTime.Now;
+                }
+                else if (wParam == (IntPtr)User32.WM_KEYUP || wParam == (IntPtr)User32.WM_SYSKEYUP)
+                {
+                    int vkCode = Marshal.ReadInt32(lParam);
+                    
+                    // 忽略功能键 F10
+                    if (vkCode == User32.VK_F10)
+                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+
+                    AddAction(new ActionModel
+                    {
+                        Type = "KeyUp",
+                        Param = vkCode
+                    });
+                    _lastActionTime = DateTime.Now;
                 }
             }
 

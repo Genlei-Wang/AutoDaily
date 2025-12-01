@@ -13,13 +13,13 @@ namespace AutoDaily
         [STAThread]
         static void Main()
         {
-            // 设置DPI感知，解决高分屏下的坐标偏移问题
+            // 重新启用DPI感知，解决鼠标坐标偏移（"乱跑"）问题
             try
             {
                 AutoDaily.Core.Native.User32.SetProcessDPIAware();
             }
             catch (Exception) { }
-
+            
             // 单实例检查
             bool createdNew;
             mutex = new Mutex(true, AppName, out createdNew);

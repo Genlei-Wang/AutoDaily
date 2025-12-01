@@ -51,8 +51,8 @@ namespace AutoDaily.UI.Forms
             Text = "AutoDaily 日报助手";
             Size = new Size(420, 280);
             MinimumSize = new Size(420, 280); // 防止窗口被压扁
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
             MinimizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(243, 243, 243); // #F3F3F3
