@@ -48,7 +48,7 @@ namespace AutoDaily.UI.Forms
 
         private void InitializeComponent()
         {
-            this.AutoScaleMode = AutoScaleMode.Font; // 启用字体缩放，解决高DPI下界面太小的问题
+            this.AutoScaleMode = AutoScaleMode.Dpi; // 使用Dpi模式缩放，比Font模式更适合处理高分屏布局
             Text = "AutoDaily 日报助手";
             Size = new Size(420, 280);
             MinimumSize = new Size(420, 280);

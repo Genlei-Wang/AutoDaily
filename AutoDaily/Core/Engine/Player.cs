@@ -279,16 +279,8 @@ namespace AutoDaily.Core.Engine
             // 等待鼠标移动到位
             Thread.Sleep(50);
             
-            // 执行点击 - 使用 ABSOLUTE 模式确保 SendInput 不会受到相对移动的干扰
-            // 计算 0-65535 的归一化坐标
-            int vWidth = System.Windows.Forms.SystemInformation.VirtualScreen.Width;
-            int vHeight = System.Windows.Forms.SystemInformation.VirtualScreen.Height;
-            int vLeft = System.Windows.Forms.SystemInformation.VirtualScreen.Left;
-            int vTop = System.Windows.Forms.SystemInformation.VirtualScreen.Top;
-
-            int absX = (int)((double)(screenX - vLeft) * 65535 / vWidth);
-            int absY = (int)((double)(screenY - vTop) * 65535 / vHeight);
-
+            // 执行点击 - 使用 最基础的 MOUSEEVENTF_LEFTDOWN/UP，不带任何位置参数
+            // 因为鼠标已经移动到位了，我们只需要在当前位置点击
             var inputs = new User32.INPUT[2];
             
             // 按下
@@ -299,10 +291,9 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = absX,
-                        dy = absY,
-                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTDOWN : User32.MOUSEEVENTF_RIGHTDOWN) 
-                                  | User32.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF_MOVE | User32.MOUSEEVENTF_VIRTUALDESK,
+                        dx = 0, // 忽略位置
+                        dy = 0, // 忽略位置
+                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTDOWN : User32.MOUSEEVENTF_RIGHTDOWN),
                         mouseData = 0,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
@@ -318,10 +309,9 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = absX,
-                        dy = absY,
-                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTUP : User32.MOUSEEVENTF_RIGHTUP) 
-                                  | User32.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF_MOVE | User32.MOUSEEVENTF_VIRTUALDESK,
+                        dx = 0, // 忽略位置
+                        dy = 0, // 忽略位置
+                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTUP : User32.MOUSEEVENTF_RIGHTUP),
                         mouseData = 0,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
