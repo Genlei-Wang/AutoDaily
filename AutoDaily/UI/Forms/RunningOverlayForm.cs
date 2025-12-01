@@ -97,7 +97,7 @@ namespace AutoDaily.UI.Forms
 
             _warningLabel = new Label
             {
-                Text = "按 F12 停止",
+                Text = "按 F10 停止",
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(255, 152, 0),
                 Location = new Point(10, 90),
@@ -157,6 +157,8 @@ namespace AutoDaily.UI.Forms
                 _statusLabel.Text = status;
             }
         }
+
+        protected override bool ShowWithoutActivation => true;
     }
 }
 

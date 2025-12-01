@@ -80,6 +80,15 @@ namespace AutoDaily.Core.Engine
             var hwnd = User32.GetForegroundWindow();
             if (hwnd != IntPtr.Zero)
             {
+                // 忽略自身窗口
+                int currentProcessId = Process.GetCurrentProcess().Id;
+                GetWindowThreadProcessId(hwnd, out uint windowProcessId);
+                
+                if (currentProcessId == windowProcessId)
+                {
+                    return; // 忽略自己的窗口
+                }
+
                 if (_targetWindow == null)
                 {
                     _targetWindow = new WindowInfo();

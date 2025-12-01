@@ -6,6 +6,9 @@ namespace AutoDaily.Core.Native
 {
     public static class User32
     {
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
         [DllImport("user32.dll")]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
@@ -92,8 +95,13 @@ namespace AutoDaily.Core.Native
         public const int WM_SYSKEYDOWN = 0x0104;
         public const int WM_SYSKEYUP = 0x0105;
 
+        public const int VK_F10 = 0x79;
         public const int VK_F12 = 0x7B;
         public const int MOD_NONE = 0x0000;
+
+        [DllImport("user32.dll")]
+        public static extern bool SetProcessDPIAware();
+
 
         public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 

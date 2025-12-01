@@ -50,6 +50,7 @@ namespace AutoDaily.UI.Forms
         {
             Text = "AutoDaily 日报助手";
             Size = new Size(420, 280);
+            MinimumSize = new Size(420, 280); // 防止窗口被压扁
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -285,12 +286,26 @@ namespace AutoDaily.UI.Forms
             _recordButton.BackColor = Color.FromArgb(244, 67, 54);
             _recordButton.ForeColor = Color.White;
 
+            // 最小化主窗口，避免自己被录制
+            this.WindowState = FormWindowState.Minimized;
+
             _overlayForm = new OverlayForm();
             _overlayForm.PauseClicked += (s, e) => { /* 暂停功能暂不实现 */ };
             _overlayForm.StopClicked += (s, e) => StopRecording();
             _overlayForm.Show();
 
-            _recorder.StartRecording();
+            // 延时一下，确保主窗口最小化动画完成，且焦点回到目标窗口
+            System.Threading.Tasks.Task.Delay(500).ContinueWith(t => 
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(new System.Action(() => _recorder.StartRecording()));
+                }
+                else
+                {
+                    _recorder.StartRecording();
+                }
+            });
         }
 
         private void StopRecording()
@@ -307,6 +322,12 @@ namespace AutoDaily.UI.Forms
 
             _recorder.StopRecording();
             LogService.LogUserAction("停止录制");
+            
+            // 恢复主窗口
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
+            this.Activate();
+            
             UpdateRunButtonState();
         }
 
@@ -390,7 +411,7 @@ namespace AutoDaily.UI.Forms
 
         private void StopRunning()
         {
-            LogService.LogUserAction("用户停止运行（F12或关闭窗口）");
+            LogService.LogUserAction("用户停止运行（F10或关闭窗口）");
             _playerCancellationTokenSource?.Cancel();
         }
 
@@ -446,12 +467,12 @@ namespace AutoDaily.UI.Forms
 
         private void RegisterHotKey()
         {
-            // 注册F12热键用于紧急停止
+            // 注册F10热键用于紧急停止（F12常被占用）
             try
             {
-                if (!User32.RegisterHotKey(Handle, 1, User32.MOD_NONE, User32.VK_F12))
+                if (!User32.RegisterHotKey(Handle, 1, User32.MOD_NONE, User32.VK_F10))
                 {
-                    System.Diagnostics.Debug.WriteLine("F12热键注册失败");
+                    System.Diagnostics.Debug.WriteLine("F10热键注册失败");
                 }
             }
             catch (Exception ex)
@@ -476,8 +497,8 @@ namespace AutoDaily.UI.Forms
         
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // 也在这里处理F12，确保能响应
-            if (keyData == Keys.F12 && _isRunning)
+            // 也在这里处理F10，确保能响应
+            if (keyData == Keys.F10 && _isRunning)
             {
                 StopRunning();
                 return true;

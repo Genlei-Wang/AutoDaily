@@ -112,6 +112,8 @@ namespace AutoDaily.UI.Forms
             _statusLabel.Text = paused ? "⏸ 已暂停" : "🔴 录制中";
         }
 
+        protected override bool ShowWithoutActivation => true;
+
         [System.Runtime.InteropServices.DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern System.IntPtr CreateRoundRectRgn(
             int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,

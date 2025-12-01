@@ -48,6 +48,20 @@ namespace AutoDaily.Core.Engine
                 return;
             }
 
+            // 防止操作自身
+            try
+            {
+                int currentProcessId = Process.GetCurrentProcess().Id;
+                User32.GetWindowThreadProcessId(hwnd, out uint windowProcessId);
+                if (currentProcessId == windowProcessId)
+                {
+                    OnStatusUpdate?.Invoke("错误：不能将自身作为目标窗口");
+                    LogService.LogError("尝试操作自身窗口，已阻止", null);
+                    return;
+                }
+            }
+            catch { }
+
             // 验证窗口句柄有效
             if (!User32.IsWindow(hwnd))
             {
@@ -194,22 +208,33 @@ namespace AutoDaily.Core.Engine
                 LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
             }
 
-            // 验证坐标在屏幕范围内
-            var screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+            // 验证坐标在屏幕范围内 (改为使用VirtualScreen以支持多显示器)
+            var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
             int originalX = screenX;
             int originalY = screenY;
-            screenX = Math.Max(0, Math.Min(screenX, screenBounds.Width - 1));
-            screenY = Math.Max(0, Math.Min(screenY, screenBounds.Height - 1));
             
-            if (originalX != screenX || originalY != screenY)
-            {
-                LogService.LogWarning($"坐标被限制: ({originalX},{originalY}) -> ({screenX},{screenY})");
-            }
-
+            // 仅当坐标完全在屏幕外时才限制，但在多屏环境下简单的限制可能也不对
+            // 这里放宽限制，信任GetWindowRect的结果
+            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            
             // 平滑移动鼠标（参考TinyTask的实现）
             SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
 
+            // 计算绝对坐标 (0-65535)
+            int screenWidth = User32.GetSystemMetrics(0); // SM_CXSCREEN
+            int screenHeight = User32.GetSystemMetrics(1); // SM_CYSCREEN
+            
+            // 注意：GetSystemMetrics returns primary monitor size. 
+            // For multi-monitor absolute coordinates, we need to map the virtual screen coordinates to 0-65535.
+            // But SendInput MOUSEEVENTF_ABSOLUTE maps 0-65535 to the primary monitor? Or virtual screen?
+            // It maps to the primary monitor usually unless VirtualDesk is used.
+            // Let's stick to the previous approach: Move mouse then click in place.
+            // The "run to edge" issue was likely due to lack of DPI awareness or clamping to PrimaryScreen.
+            // Since we fixed DPI and clamping, we should try keeping the click in place first.
+            // If we use ABSOLUTE here, we need to be very careful about multi-monitor mapping.
+            
             // 执行点击
             var inputs = new User32.INPUT[2];
             
@@ -275,10 +300,10 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            // 验证坐标在屏幕范围内
-            var screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-            screenX = Math.Max(0, Math.Min(screenX, screenBounds.Width - 1));
-            screenY = Math.Max(0, Math.Min(screenY, screenBounds.Height - 1));
+            // 验证坐标在屏幕范围内 (改为使用VirtualScreen)
+            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
 
             // 平滑移动鼠标
             SmoothMoveMouse(screenX, screenY);
@@ -321,11 +346,20 @@ namespace AutoDaily.Core.Engine
             if (string.IsNullOrEmpty(text))
                 return;
 
-            foreach (char c in text)
+            try 
             {
-                // 简化处理：使用SendKeys（实际应该用SendInput处理所有字符）
-                System.Windows.Forms.SendKeys.SendWait(c.ToString());
-                Thread.Sleep(20);
+                foreach (char c in text)
+                {
+                    // 简化处理：使用SendKeys（实际应该用SendInput处理所有字符）
+                    // Wrap in try-catch to prevent crash on special chars
+                    System.Windows.Forms.SendKeys.SendWait(c.ToString());
+                    Thread.Sleep(20);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError($"输入模拟失败: {text}", ex);
+                OnStatusUpdate?.Invoke($"输入出错: {ex.Message}");
             }
         }
 
