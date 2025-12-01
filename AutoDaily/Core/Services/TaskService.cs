@@ -8,24 +8,21 @@ namespace AutoDaily.Core.Services
 {
     public class TaskService
     {
-        private static readonly string DataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AutoDaily");
+        private static readonly string DataDirectory = AppDomain.CurrentDomain.BaseDirectory;
         private static readonly string TasksFilePath = Path.Combine(DataDirectory, "tasks.json");
 
         private TaskData _taskData;
 
         public TaskService()
         {
-            EnsureDataDirectory();
+            // EnsureDataDirectory(); // No need to create BaseDirectory usually, but if it's separate logic?
+            // BaseDirectory is EXE dir. It exists.
             LoadTasks();
         }
 
         private void EnsureDataDirectory()
         {
-            if (!Directory.Exists(DataDirectory))
-            {
-                Directory.CreateDirectory(DataDirectory);
-            }
+             // No-op or remove
         }
 
         public void LoadTasks()
@@ -90,7 +87,7 @@ namespace AutoDaily.Core.Services
         public bool HasRecordedActions()
         {
             var task = GetCurrentTask();
-            return task.Actions != null && task.Actions.Count > 0;
+            return task.Events != null && task.Events.Count > 0;
         }
     }
 }

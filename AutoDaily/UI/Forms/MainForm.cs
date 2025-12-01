@@ -338,16 +338,28 @@ namespace AutoDaily.UI.Forms
                 Invoke(new System.Action(() =>
                 {
                     var task = _taskService.GetCurrentTask();
-                    task.Actions = actions;
+                    task.Events = actions;
                     task.TargetWindow = windowInfo;
+                    
+                    // Update Meta
+                    task.Meta.TotalEvents = actions.Count;
+                    task.Meta.Resolution = $"{Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}";
+                    task.Meta.CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds();
+                    
                     _taskService.UpdateCurrentTask(task);
                 }));
             }
             else
             {
                 var task = _taskService.GetCurrentTask();
-                task.Actions = actions;
+                task.Events = actions;
                 task.TargetWindow = windowInfo;
+
+                // Update Meta
+                task.Meta.TotalEvents = actions.Count;
+                task.Meta.Resolution = $"{Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}";
+                task.Meta.CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds();
+
                 _taskService.UpdateCurrentTask(task);
             }
         }

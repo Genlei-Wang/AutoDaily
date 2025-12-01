@@ -86,14 +86,14 @@ namespace AutoDaily.Core.Engine
             LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={windowRect.Right - windowRect.Left}, Height={windowRect.Bottom - windowRect.Top}");
 
             // 4. 执行动作序列
-            if (task.Actions == null || task.Actions.Count == 0)
+            if (task.Events == null || task.Events.Count == 0)
             {
                 OnStatusUpdate?.Invoke("错误：没有录制的动作");
                 return;
             }
 
-            int totalActions = task.Actions.Count;
-            for (int i = 0; i < task.Actions.Count; i++)
+            int totalActions = task.Events.Count;
+            for (int i = 0; i < task.Events.Count; i++)
             {
                 if (token.IsCancellationRequested)
                 {
@@ -101,7 +101,7 @@ namespace AutoDaily.Core.Engine
                     return;
                 }
 
-                var action = task.Actions[i];
+                var action = task.Events[i];
                 if (action == null)
                     continue;
 

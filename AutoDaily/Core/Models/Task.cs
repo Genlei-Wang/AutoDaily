@@ -9,8 +9,17 @@ namespace AutoDaily.Core.Models
         public string Name { get; set; } = "Morning Report";
         public Schedule Schedule { get; set; } = new Schedule();
         public WindowInfo TargetWindow { get; set; } = new WindowInfo();
-        public List<Action> Actions { get; set; } = new List<Action>();
+        public List<Action> Events { get; set; } = new List<Action>(); // Was Actions
         public DateTime? LastRun { get; set; }
+        public MetaInfo Meta { get; set; } = new MetaInfo(); // Added Meta
+    }
+
+    public class MetaInfo
+    {
+        public string Version { get; set; } = "1.0";
+        public long CreatedAt { get; set; } = DateTimeOffset.Now.ToUnixTimeSeconds();
+        public string Resolution { get; set; } = "";
+        public int TotalEvents { get; set; } = 0;
     }
 
     public class Schedule
