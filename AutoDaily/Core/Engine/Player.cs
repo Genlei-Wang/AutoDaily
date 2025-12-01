@@ -221,19 +221,6 @@ namespace AutoDaily.Core.Engine
             // 平滑移动鼠标（参考TinyTask的实现）
             SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
-
-            // 计算绝对坐标 (0-65535)
-            int screenWidth = User32.GetSystemMetrics(0); // SM_CXSCREEN
-            int screenHeight = User32.GetSystemMetrics(1); // SM_CYSCREEN
-            
-            // 注意：GetSystemMetrics returns primary monitor size. 
-            // For multi-monitor absolute coordinates, we need to map the virtual screen coordinates to 0-65535.
-            // But SendInput MOUSEEVENTF_ABSOLUTE maps 0-65535 to the primary monitor? Or virtual screen?
-            // It maps to the primary monitor usually unless VirtualDesk is used.
-            // Let's stick to the previous approach: Move mouse then click in place.
-            // The "run to edge" issue was likely due to lack of DPI awareness or clamping to PrimaryScreen.
-            // Since we fixed DPI and clamping, we should try keeping the click in place first.
-            // If we use ABSOLUTE here, we need to be very careful about multi-monitor mapping.
             
             // 执行点击
             var inputs = new User32.INPUT[2];
