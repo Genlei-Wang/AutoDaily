@@ -252,10 +252,11 @@ namespace AutoDaily.Core.Engine
                     if (vkCode >= 0x70 && vkCode <= 0x7B)
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
 
-                    // 记录特殊键（Enter, Tab, Escape等）
+                    // 记录特殊键（Enter, Tab, Escape, Win键等）
                     if (vkCode == User32.VK_ENTER || vkCode == User32.VK_TAB || 
                         vkCode == User32.VK_ESCAPE || vkCode == User32.VK_BACK || 
-                        vkCode == User32.VK_DELETE)
+                        vkCode == User32.VK_DELETE || vkCode == User32.VK_LWIN || 
+                        vkCode == User32.VK_RWIN)
                     {
                         AddAction(new ActionModel
                         {
@@ -266,20 +267,36 @@ namespace AutoDaily.Core.Engine
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
                     }
 
-                    // 记录可见字符（通过SendKeys转换）
+                    // 记录可见字符输入（字母、数字等）
                     try
                     {
-                        // 获取当前按键对应的字符
-                        var key = (Keys)vkCode;
-                        if (key >= Keys.A && key <= Keys.Z || 
-                            key >= Keys.D0 && key <= Keys.D9 ||
-                            key >= Keys.NumPad0 && key <= Keys.NumPad9)
+                        // 使用ToUnicode将虚拟键码转换为字符
+                        byte[] keyboardState = new byte[256];
+                        User32.GetKeyboardState(keyboardState);
+                        StringBuilder sb = new StringBuilder(10);
+                        int result = User32.ToUnicode(vkCode, 0, keyboardState, sb, sb.Capacity, 0);
+                        
+                        if (result > 0 && sb.Length > 0)
                         {
-                            // 这些键会被Input类型处理，这里不单独记录
-                            // 实际输入会通过SendKeys捕获
+                            char ch = sb[0];
+                            // 记录可打印字符（字母、数字、标点等）
+                            if (char.IsLetterOrDigit(ch) || char.IsPunctuation(ch) || char.IsSymbol(ch) || ch == ' ')
+                            {
+                                AddAction(new ActionModel
+                                {
+                                    Type = "Input",
+                                    Text = ch.ToString()
+                                });
+                                _lastActionTime = DateTime.Now;
+                                return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                            }
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // 如果转换失败，记录为KeyPress
+                        System.Diagnostics.Debug.WriteLine($"字符转换失败: {ex.Message}");
+                    }
                 }
             }
 

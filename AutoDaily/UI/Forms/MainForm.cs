@@ -57,10 +57,10 @@ namespace AutoDaily.UI.Forms
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
             
-            // 基础尺寸400x600（在96 DPI下）
+            // 基础尺寸400x700（在96 DPI下），增加高度以容纳定时运行配置（开启后110px）
             // WinForms的AutoScaleMode.Dpi会自动根据系统DPI缩放窗口和控件
-            Size = new Size(400, 600);
-            MinimumSize = new Size(400, 600);
+            Size = new Size(400, 700);
+            MinimumSize = new Size(400, 700);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -320,10 +320,8 @@ namespace AutoDaily.UI.Forms
             _recordButton.BackColor = Color.FromArgb(244, 67, 54);
             _recordButton.ForeColor = Color.White;
 
-            _overlayForm = new OverlayForm();
-            _overlayForm.PauseClicked += (s, e) => { /* 暂停功能暂不实现 */ };
-            _overlayForm.StopClicked += (s, e) => StopRecording();
-            _overlayForm.Show();
+            // 录制时最小化主窗口，不显示弹窗（避免遮挡用户操作）
+            this.WindowState = FormWindowState.Minimized;
 
             _recorder.StartRecording();
         }
@@ -336,6 +334,11 @@ namespace AutoDaily.UI.Forms
             _recordButton.Text = "🔴 录制";
             _recordButton.BackColor = Color.White;
             _recordButton.ForeColor = Color.FromArgb(244, 67, 54);
+
+            // 恢复主窗口显示
+            this.WindowState = FormWindowState.Normal;
+            this.Show();
+            this.Activate();
 
             _overlayForm?.Close();
             _overlayForm = null;
@@ -439,11 +442,23 @@ namespace AutoDaily.UI.Forms
             _playerCancellationTokenSource?.Cancel();
         }
 
+        private string _currentActionType = "执行中"; // 保存当前动作类型
+
         private void Player_OnStatusUpdate(string status)
         {
             if (_runningOverlay != null && !_runningOverlay.IsDisposed)
             {
                 _runningOverlay.UpdateStatus(status);
+                
+                // 从状态字符串中提取动作类型（格式：执行步骤 X/Y: 动作类型）
+                if (status.Contains(":"))
+                {
+                    var parts = status.Split(':');
+                    if (parts.Length > 1)
+                    {
+                        _currentActionType = parts[1].Trim();
+                    }
+                }
             }
         }
 
@@ -451,7 +466,8 @@ namespace AutoDaily.UI.Forms
         {
             if (_runningOverlay != null && !_runningOverlay.IsDisposed)
             {
-                _runningOverlay.UpdateProgress(current, total, "执行中");
+                // 使用当前动作类型更新进度
+                _runningOverlay.UpdateProgress(current, total, _currentActionType);
             }
         }
 

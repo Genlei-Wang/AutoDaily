@@ -106,6 +106,14 @@ namespace AutoDaily.Core.Native
         [DllImport("user32.dll")]
         public static extern int GetSystemMetrics(int nIndex);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetKeyboardState(byte[] lpKeyState);
+
+        [DllImport("user32.dll")]
+        public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, 
+            [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
+
         public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -181,6 +189,8 @@ namespace AutoDaily.Core.Native
         public const int VK_ESCAPE = 0x1B;
         public const int VK_BACK = 0x08;
         public const int VK_DELETE = 0x2E;
+        public const int VK_LWIN = 0x5B; // 左Win键
+        public const int VK_RWIN = 0x5C; // 右Win键
     }
 }
 
