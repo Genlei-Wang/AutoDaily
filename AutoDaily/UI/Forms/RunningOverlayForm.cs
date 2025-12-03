@@ -7,6 +7,12 @@ namespace AutoDaily.UI.Forms
 {
     public partial class RunningOverlayForm : Form
     {
+        // 字号规范常量
+        private const float FONT_SIZE_TITLE = 11f;      // 标题
+        private const float FONT_SIZE_STATUS = 9f;      // 状态文字
+        private const float FONT_SIZE_WARNING = 8f;     // 警告提示
+        private const float FONT_SIZE_HINT = 7f;        // 小提示
+
         private Label _titleLabel;
         private Label _statusLabel;
         private Label _warningLabel;
@@ -75,8 +81,8 @@ namespace AutoDaily.UI.Forms
 
             _titleLabel = new Label
             {
-                Text = "🤖 正在运行", // 根据文档要求
-                Font = new Font("Microsoft YaHei", 10, FontStyle.Bold),
+                Text = "🤖 正在运行",
+                Font = new Font("Microsoft YaHei", FONT_SIZE_TITLE, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204), // 蓝色 RGB: 0,122,204
                 Location = new Point(10, 8),
                 Size = new Size(panel.Width - 20, 20),
@@ -86,7 +92,7 @@ namespace AutoDaily.UI.Forms
             _statusLabel = new Label
             {
                 Text = "准备中...",
-                Font = new Font("Microsoft YaHei", 8),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_STATUS, FontStyle.Regular),
                 ForeColor = Color.FromArgb(60, 60, 60), // 灰色 RGB: 60,60,60
                 Location = new Point(10, 30),
                 Size = new Size(panel.Width - 20, 18),
@@ -105,7 +111,7 @@ namespace AutoDaily.UI.Forms
             _warningLabel = new Label
             {
                 Text = "按 F10 停止",
-                Font = new Font("Microsoft YaHei", 7),
+                Font = new Font("Microsoft YaHei", 8, FontStyle.Regular), // 增大字号
                 ForeColor = Color.FromArgb(255, 152, 0),
                 Location = new Point(10, 68),
                 Size = new Size(panel.Width - 20, 15),
@@ -115,7 +121,7 @@ namespace AutoDaily.UI.Forms
             _stopHintLabel = new Label
             {
                 Text = "或点击 × 关闭",
-                Font = new Font("Microsoft YaHei", 6),
+                Font = new Font("Microsoft YaHei", 7, FontStyle.Regular), // 增大字号
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(10, 85),
                 Size = new Size(panel.Width - 20, 12),

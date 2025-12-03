@@ -8,8 +8,10 @@ namespace AutoDaily.Core.Services
 {
     public class TaskService
     {
+        // 数据存储在exe同目录下的Data文件夹
         private static readonly string DataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AutoDaily");
+            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
+            "Data");
         private static readonly string TasksFilePath = Path.Combine(DataDirectory, "tasks.json");
 
         private TaskData _taskData;

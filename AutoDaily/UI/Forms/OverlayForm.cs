@@ -6,6 +6,11 @@ namespace AutoDaily.UI.Forms
 {
     public partial class OverlayForm : Form
     {
+        // 字号规范常量
+        private const float FONT_SIZE_STATUS = 10f;     // 状态文字
+        private const float FONT_SIZE_TIME = 9f;        // 时间文字
+        private const float FONT_SIZE_BUTTON = 9f;      // 按钮文字
+
         private Label _statusLabel;
         private Label _timeLabel;
         private Button _pauseButton;
@@ -52,7 +57,7 @@ namespace AutoDaily.UI.Forms
             {
                 Text = "🔴 录制中",
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 10, FontStyle.Bold),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_STATUS, FontStyle.Bold),
                 Location = new Point(15, 12),
                 AutoSize = true
             };
@@ -61,7 +66,7 @@ namespace AutoDaily.UI.Forms
             {
                 Text = "00:00",
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 9),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_TIME, FontStyle.Regular),
                 Location = new Point(100, 15),
                 AutoSize = true
             };

@@ -6,8 +6,10 @@ namespace AutoDaily.Core.Services
 {
     public class LogService
     {
+        // 日志存储在exe同目录下的Data/Logs文件夹
         private static readonly string LogDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AutoDaily", "Logs");
+            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
+            "Data", "Logs");
         private static readonly string LogFilePath = Path.Combine(LogDirectory, 
             $"AutoDaily_{DateTime.Now:yyyyMMdd}.log");
 

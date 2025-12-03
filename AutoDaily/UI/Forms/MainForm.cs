@@ -42,6 +42,15 @@ namespace AutoDaily.UI.Forms
         private User32.LowLevelProc _hotkeyHookProc;
         private NotifyIcon _notifyIcon; // 系统托盘图标
 
+        // 字号规范常量
+        private const float FONT_SIZE_TITLE = 13f;      // 标题（状态指示灯）
+        private const float FONT_SIZE_BUTTON = 12f;     // 按钮文字
+        private const float FONT_SIZE_LABEL = 10f;      // 标签文字（定时运行、每天等）
+        private const float FONT_SIZE_HINT = 9f;        // 提示文字（录制新动作、运行跑一遍）
+        private const float FONT_SIZE_TIME = 10f;       // 时间选择器
+        private const float FONT_SIZE_NEXT_RUN = 9f;   // 下次运行提示
+        private const float FONT_SIZE_WARNING = 8f;     // 警告提示
+
         public MainForm()
         {
             InitializeComponent();
@@ -73,17 +82,18 @@ namespace AutoDaily.UI.Forms
             _statusIndicator = new Label
             {
                 Text = "🟢 就绪",
-                Font = new Font("Microsoft YaHei", 12, FontStyle.Bold),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_TITLE, FontStyle.Bold),
                 ForeColor = Color.FromArgb(76, 175, 80),
                 Location = new Point(20, 20),
                 AutoSize = true
             };
 
-            // 核心操作区卡片（居中）
+            // 核心操作区卡片（居中，减小宽度增加左右边距）
+            int cardWidth = 340; // 从360减小到340，增加左右边距
             _operationCard = new Panel
             {
-                Location = new Point((400 - 360) / 2, 50), // 居中：(窗口宽度 - 卡片宽度) / 2
-                Size = new Size(360, 120),
+                Location = new Point((400 - cardWidth) / 2, 50), // 居中
+                Size = new Size(cardWidth, 120),
                 BackColor = Color.White
             };
             DrawRoundedPanel(_operationCard, 8);
@@ -92,9 +102,9 @@ namespace AutoDaily.UI.Forms
             _recordButton = new Button
             {
                 Text = "🔴 录制",
-                Size = new Size(160, 60),
-                Location = new Point(20, 20),
-                Font = new Font("Microsoft YaHei", 11, FontStyle.Bold),
+                Size = new Size(150, 60),
+                Location = new Point(15, 20),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_BUTTON, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(244, 67, 54),
                 BackColor = Color.White,
@@ -108,9 +118,9 @@ namespace AutoDaily.UI.Forms
             var recordHint = new Label
             {
                 Text = "录制新动作",
-                Font = new Font("Microsoft YaHei", 8),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_HINT, FontStyle.Regular),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(20, 85),
+                Location = new Point(15, 85),
                 AutoSize = true
             };
 
@@ -118,9 +128,9 @@ namespace AutoDaily.UI.Forms
             _runButton = new Button
             {
                 Text = "▶️ 运行",
-                Size = new Size(160, 60),
-                Location = new Point(200, 20),
-                Font = new Font("Microsoft YaHei", 11, FontStyle.Bold),
+                Size = new Size(150, 60),
+                Location = new Point(175, 20), // 调整位置以适应新宽度
+                Font = new Font("Microsoft YaHei", FONT_SIZE_BUTTON, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(0, 122, 204), // #007ACC
@@ -134,9 +144,9 @@ namespace AutoDaily.UI.Forms
             {
                 Name = "RunHintLabel",
                 Text = "运行跑一遍",
-                Font = new Font("Microsoft YaHei", 8),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_HINT, FontStyle.Regular),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(200, 85),
+                Location = new Point(175, 85),
                 AutoSize = true
             };
 
@@ -145,11 +155,11 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（居中，开启后高度约130px以容纳提示信息）
+            // 定时运行卡片（居中，与录制组件同宽，开启后高度约130px以容纳提示信息）
             _scheduleCard = new Panel
             {
-                Location = new Point((400 - 360) / 2, 180), // 居中
-                Size = new Size(360, 50), // 默认关闭状态50px，开启后动态调整为130px
+                Location = new Point((400 - cardWidth) / 2, 180), // 居中，与录制组件对齐
+                Size = new Size(cardWidth, 50), // 默认关闭状态50px，开启后动态调整为130px
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
@@ -157,7 +167,7 @@ namespace AutoDaily.UI.Forms
             // 开关和标签（始终显示）
             _scheduleToggle = new ToggleSwitch
             {
-                Location = new Point(20, 15),
+                Location = new Point(15, 15),
                 Checked = false
             };
             _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged;
@@ -165,9 +175,9 @@ namespace AutoDaily.UI.Forms
             _scheduleTimeLabel = new Label
             {
                 Text = "定时运行",
-                Font = new Font("Microsoft YaHei", 9),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_LABEL, FontStyle.Regular),
                 ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(80, 18),
+                Location = new Point(75, 18),
                 AutoSize = true
             };
 
@@ -176,9 +186,9 @@ namespace AutoDaily.UI.Forms
             {
                 Name = "ScheduleTimeConfig",
                 Text = "每天",
-                Font = new Font("Microsoft YaHei", 10),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_LABEL, FontStyle.Regular),
                 ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(20, 50),
+                Location = new Point(15, 50),
                 AutoSize = true,
                 Visible = false
             };
@@ -190,8 +200,8 @@ namespace AutoDaily.UI.Forms
                 CustomFormat = "HH:mm", // 只显示时:分，不显示秒
                 ShowUpDown = true,
                 Size = new Size(80, 25),
-                Location = new Point(60, 47),
-                Font = new Font("Microsoft YaHei", 9),
+                Location = new Point(55, 47),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_TIME, FontStyle.Regular),
                 Visible = false
             };
             _timePicker.Value = DateTime.Today.AddHours(9);
@@ -201,9 +211,9 @@ namespace AutoDaily.UI.Forms
             {
                 Name = "ScheduleTimeConfig",
                 Text = "*下次运行：明天 09:00",
-                Font = new Font("Microsoft YaHei", 8),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_NEXT_RUN, FontStyle.Regular),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(20, 85), // 增加行间距
+                Location = new Point(15, 85), // 增加行间距
                 AutoSize = true,
                 Visible = false
             };
@@ -213,10 +223,10 @@ namespace AutoDaily.UI.Forms
             {
                 Name = "ScheduleTimeConfig",
                 Text = "⚠️ 请保持软件运行，不要关闭或让电脑睡眠",
-                Font = new Font("Microsoft YaHei", 7),
+                Font = new Font("Microsoft YaHei", FONT_SIZE_WARNING, FontStyle.Regular),
                 ForeColor = Color.FromArgb(255, 152, 0), // 橙色提示
-                Location = new Point(20, 105),
-                Size = new Size(320, 15),
+                Location = new Point(15, 105),
+                Size = new Size(cardWidth - 30, 18), // 适应卡片宽度
                 Visible = false
             };
 
