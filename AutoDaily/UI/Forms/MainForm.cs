@@ -165,10 +165,10 @@ namespace AutoDaily.UI.Forms
             };
             DrawRoundedPanel(_scheduleCard, 8);
 
-            // 开关和标签（始终显示）
+            // 开关和标签（始终显示，参考Apple设计：增加行间距）
             _scheduleToggle = new ToggleSwitch
             {
-                Location = new Point(15, 15),
+                Location = new Point(20, 18), // 从15增加到20，增加左边距
                 Checked = false
             };
             _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged;
@@ -177,19 +177,19 @@ namespace AutoDaily.UI.Forms
             {
                 Text = "定时运行",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_LABEL, FontStyle.Regular),
-                ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(75, 18),
+                ForeColor = Color.FromArgb(60, 60, 60), // Apple深灰文字
+                Location = new Point(80, 20), // 从75,18调整到80,20，增加行间距
                 AutoSize = true
             };
 
-            // 时间配置（默认隐藏，开启后显示）
+            // 时间配置（默认隐藏，开启后显示，参考Apple设计：增加行间距）
             var scheduleLabel = new Label
             {
                 Name = "ScheduleTimeConfig",
                 Text = "每天",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_LABEL, FontStyle.Regular),
-                ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(15, 50),
+                ForeColor = Color.FromArgb(60, 60, 60), // Apple深灰文字
+                Location = new Point(20, 60), // 从50增加到60，增加行间距
                 AutoSize = true,
                 Visible = false
             };
@@ -201,7 +201,7 @@ namespace AutoDaily.UI.Forms
                 CustomFormat = "HH:mm", // 只显示时:分，不显示秒
                 ShowUpDown = true,
                 Size = new Size(80, 25),
-                Location = new Point(55, 47),
+                Location = new Point(60, 57), // 从47调整到57，增加行间距
                 Font = new Font("Microsoft YaHei", FONT_SIZE_TIME, FontStyle.Regular),
                 Visible = false
             };
@@ -213,21 +213,21 @@ namespace AutoDaily.UI.Forms
                 Name = "ScheduleTimeConfig",
                 Text = "*下次运行：明天 09:00",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_NEXT_RUN, FontStyle.Regular),
-                ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(15, 85), // 增加行间距
+                ForeColor = Color.FromArgb(142, 142, 147), // Apple次要文字颜色
+                Location = new Point(20, 95), // 从85增加到95，增加行间距
                 AutoSize = true,
                 Visible = false
             };
 
-            // 定时运行提示信息（开启后显示）
+            // 定时运行提示信息（开启后显示，参考Apple设计：增加行间距）
             var scheduleHintLabel = new Label
             {
                 Name = "ScheduleTimeConfig",
                 Text = "⚠️ 请保持软件运行，不要关闭或让电脑睡眠",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_WARNING, FontStyle.Regular),
-                ForeColor = Color.FromArgb(255, 152, 0), // 橙色提示
-                Location = new Point(15, 105),
-                Size = new Size(cardWidth - 30, 18), // 适应卡片宽度
+                ForeColor = Color.FromArgb(255, 149, 0), // Apple橙色
+                Location = new Point(20, 120), // 从105增加到120，增加行间距
+                Size = new Size(cardWidth - 40, 20), // 适应卡片宽度，增加高度
                 Visible = false
             };
 
