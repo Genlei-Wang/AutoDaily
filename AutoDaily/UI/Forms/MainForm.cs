@@ -119,6 +119,7 @@ namespace AutoDaily.UI.Forms
 
             var runHint = new Label
             {
+                Name = "RunHintLabel",
                 Text = "运行跑一遍",
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
@@ -225,24 +226,19 @@ namespace AutoDaily.UI.Forms
         {
             bool hasActions = _taskService.HasRecordedActions();
             _runButton.Enabled = hasActions;
-            if (!hasActions)
+            
+            // 使用 Name 属性查找提示标签，更可靠
+            var hintLabel = _operationCard.Controls.OfType<Label>()
+                .FirstOrDefault(l => l.Name == "RunHintLabel");
+            
+            if (hintLabel != null)
             {
-                _runButton.Text = "▶️ 运行";
-                // 在提示标签中显示
-                var hintLabel = _operationCard.Controls.OfType<Label>()
-                    .FirstOrDefault(l => l.Text.Contains("运行"));
-                if (hintLabel != null)
+                if (!hasActions)
                 {
                     hintLabel.Text = "请先录制动作";
                     hintLabel.ForeColor = Color.FromArgb(244, 67, 54);
                 }
-            }
-            else
-            {
-                _runButton.Text = "▶️ 运行";
-                var hintLabel = _operationCard.Controls.OfType<Label>()
-                    .FirstOrDefault(l => l.Text.Contains("请先"));
-                if (hintLabel != null)
+                else
                 {
                     hintLabel.Text = "运行跑一遍";
                     hintLabel.ForeColor = Color.FromArgb(150, 150, 150);
@@ -320,6 +316,7 @@ namespace AutoDaily.UI.Forms
                     task.Actions = actions;
                     task.TargetWindow = windowInfo;
                     _taskService.UpdateCurrentTask(task);
+                    UpdateRunButtonState();
                 }));
             }
             else
@@ -328,6 +325,7 @@ namespace AutoDaily.UI.Forms
                 task.Actions = actions;
                 task.TargetWindow = windowInfo;
                 _taskService.UpdateCurrentTask(task);
+                UpdateRunButtonState();
             }
         }
 

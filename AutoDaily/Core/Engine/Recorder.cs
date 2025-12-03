@@ -65,11 +65,17 @@ namespace AutoDaily.Core.Engine
 
             _isRecording = false;
 
-            UnhookWindowsHookEx(_mouseHook);
-            UnhookWindowsHookEx(_keyboardHook);
+            if (_mouseHook != IntPtr.Zero)
+            {
+                User32.UnhookWindowsHookEx(_mouseHook);
+                _mouseHook = IntPtr.Zero;
+            }
 
-            _mouseHook = IntPtr.Zero;
-            _keyboardHook = IntPtr.Zero;
+            if (_keyboardHook != IntPtr.Zero)
+            {
+                User32.UnhookWindowsHookEx(_keyboardHook);
+                _keyboardHook = IntPtr.Zero;
+            }
 
             OnStatusUpdate?.Invoke("录制完成");
             OnRecordingComplete?.Invoke(_actions, _targetWindow);
@@ -220,10 +226,6 @@ namespace AutoDaily.Core.Engine
 
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
         public void Dispose()
         {

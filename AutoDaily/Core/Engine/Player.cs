@@ -113,14 +113,33 @@ namespace AutoDaily.Core.Engine
                 var processes = Process.GetProcessesByName(windowInfo.ProcessName.Replace(".exe", ""));
                 if (processes.Length > 0)
                 {
-                    return processes[0].MainWindowHandle;
+                    // 优先使用主窗口句柄，如果不存在则尝试查找第一个可见窗口
+                    var hwnd = processes[0].MainWindowHandle;
+                    if (hwnd != IntPtr.Zero && User32.IsWindow(hwnd))
+                    {
+                        return hwnd;
+                    }
+                    
+                    // 如果主窗口句柄无效，尝试查找第一个可见窗口
+                    foreach (var process in processes)
+                    {
+                        hwnd = process.MainWindowHandle;
+                        if (hwnd != IntPtr.Zero && User32.IsWindow(hwnd))
+                        {
+                            return hwnd;
+                        }
+                    }
                 }
             }
 
             // 通过窗口标题查找
             if (!string.IsNullOrEmpty(windowInfo.Title))
             {
-                return User32.FindWindow(null, windowInfo.Title);
+                var hwnd = User32.FindWindow(null, windowInfo.Title);
+                if (hwnd != IntPtr.Zero && User32.IsWindow(hwnd))
+                {
+                    return hwnd;
+                }
             }
 
             return IntPtr.Zero;
@@ -207,19 +226,6 @@ namespace AutoDaily.Core.Engine
             // 平滑移动鼠标（参考TinyTask的实现）
             SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
-
-            // 计算绝对坐标 (0-65535)
-            int screenWidth = User32.GetSystemMetrics(0); // SM_CXSCREEN
-            int screenHeight = User32.GetSystemMetrics(1); // SM_CYSCREEN
-            
-            // 注意：GetSystemMetrics returns primary monitor size. 
-            // For multi-monitor absolute coordinates, we need to map the virtual screen coordinates to 0-65535.
-            // But SendInput MOUSEEVENTF_ABSOLUTE maps 0-65535 to the primary monitor? Or virtual screen?
-            // It maps to the primary monitor usually unless VirtualDesk is used.
-            // Let's stick to the previous approach: Move mouse then click in place.
-            // The "run to edge" issue was likely due to lack of DPI awareness or clamping to PrimaryScreen.
-            // Since we fixed DPI and clamping, we should try keeping the click in place first.
-            // If we use ABSOLUTE here, we need to be very careful about multi-monitor mapping.
             
             // 执行点击
             var inputs = new User32.INPUT[2];
