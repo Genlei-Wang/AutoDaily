@@ -91,28 +91,30 @@ namespace AutoDaily.UI.Forms
             };
 
             // 核心操作区卡片（居中，参考Apple设计：卡片宽度适中，左右边距充足）
-            int cardWidth = 320; // 从340减小到320，增加左右边距（各40px）
+            int cardWidth = 300; // 减小宽度，确保不超出且居中
             _operationCard = new Panel
             {
-                Location = new Point((400 - cardWidth) / 2, 70), // 从50增加到70，增加与状态指示灯的间距
                 Size = new Size(cardWidth, 120),
-                BackColor = Color.White
+                BackColor = Color.White,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right // 自适应宽度
             };
+            // 居中计算将在Resize事件中处理
+            CenterCard(_operationCard, 70);
             DrawRoundedPanel(_operationCard, 8);
 
-            // 录制按钮
+            // 录制按钮（参考Apple设计：按钮间距和颜色，确保不超出卡片）
             _recordButton = new Button
             {
                 Text = "🔴 录制",
-                Size = new Size(150, 60),
-                Location = new Point(15, 20),
+                Size = new Size(130, 60), // 减小按钮宽度
+                Location = new Point(15, 25), // 增加内边距
                 Font = new Font("Microsoft YaHei", FONT_SIZE_BUTTON, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
-                ForeColor = Color.FromArgb(244, 67, 54),
+                ForeColor = Color.FromArgb(255, 59, 48), // Apple红色
                 BackColor = Color.White,
                 Cursor = Cursors.Hand
             };
-            _recordButton.FlatAppearance.BorderColor = Color.FromArgb(244, 67, 54);
+            _recordButton.FlatAppearance.BorderColor = Color.FromArgb(255, 59, 48);
             _recordButton.FlatAppearance.BorderSize = 2;
             _recordButton.Click += RecordButton_Click;
             DrawRoundedButton(_recordButton, 8);
@@ -121,21 +123,21 @@ namespace AutoDaily.UI.Forms
             {
                 Text = "录制新动作",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_HINT, FontStyle.Regular),
-                ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(15, 85),
+                ForeColor = Color.FromArgb(142, 142, 147), // Apple次要文字颜色
+                Location = new Point(15, 90),
                 AutoSize = true
             };
 
-            // 运行按钮
+            // 运行按钮（参考Apple设计：按钮间距和颜色，确保不超出卡片）
             _runButton = new Button
             {
                 Text = "▶️ 运行",
-                Size = new Size(150, 60),
-                Location = new Point(175, 20), // 调整位置以适应新宽度
+                Size = new Size(130, 60), // 减小按钮宽度
+                Location = new Point(155, 25), // 调整位置，确保不超出
                 Font = new Font("Microsoft YaHei", FONT_SIZE_BUTTON, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(0, 122, 204), // #007ACC
+                BackColor = Color.FromArgb(0, 122, 255), // Apple蓝色
                 Cursor = Cursors.Hand
             };
             _runButton.FlatAppearance.BorderSize = 0;
@@ -147,8 +149,8 @@ namespace AutoDaily.UI.Forms
                 Name = "RunHintLabel",
                 Text = "运行跑一遍",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_HINT, FontStyle.Regular),
-                ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(175, 85),
+                ForeColor = Color.FromArgb(142, 142, 147), // Apple次要文字颜色
+                Location = new Point(155, 90),
                 AutoSize = true
             };
 
@@ -563,15 +565,20 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（包含提示信息）
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（参考Apple设计：自适应高度）
+            int cardWidth = 300; // 与录制组件同宽
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 130); // 容纳时间配置和提示信息
+                // 自适应高度：根据内容计算所需高度（提示信息在125位置，高度25，所以需要150）
+                _scheduleCard.Size = new Size(cardWidth, 160); // 增加到160，确保所有内容可见
             }
             else
             {
-                _scheduleCard.Size = new Size(360, 50); // 仅显示开关
+                _scheduleCard.Size = new Size(cardWidth, 60);
             }
+            
+            // 重新居中卡片
+            CenterCard(_scheduleCard, 210);
             
             // 重新绘制圆角区域，确保内容不被裁剪
             DrawRoundedPanel(_scheduleCard, 8);
