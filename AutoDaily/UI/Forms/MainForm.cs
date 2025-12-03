@@ -167,6 +167,9 @@ namespace AutoDaily.UI.Forms
             // 居中计算将在Resize事件中处理
             CenterCard(_scheduleCard, 210);
             DrawRoundedPanel(_scheduleCard, 8);
+            
+            // 监听窗口大小变化，重新居中卡片
+            this.Resize += MainForm_Resize;
 
             // 开关和标签（始终显示，参考Apple设计：增加行间距）
             _scheduleToggle = new ToggleSwitch
