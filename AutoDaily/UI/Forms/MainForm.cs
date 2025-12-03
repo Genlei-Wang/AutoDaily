@@ -69,12 +69,13 @@ namespace AutoDaily.UI.Forms
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
             
-            // 基础尺寸400x600（在96 DPI下）
+            // 基础尺寸400x600（在96 DPI下），支持自适应调整
             // WinForms的AutoScaleMode.Dpi会自动根据系统DPI缩放窗口和控件
             Size = new Size(400, 600);
-            MinimumSize = new Size(400, 600);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            MinimumSize = new Size(380, 550); // 允许缩小
+            MaximumSize = new Size(500, 800); // 允许放大
+            FormBorderStyle = FormBorderStyle.Sizable; // 改为可调整大小
+            MaximizeBox = true; // 允许最大化
             MinimizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(242, 242, 247); // Apple系统背景色
@@ -156,13 +157,15 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（居中，与录制组件同宽，参考Apple设计：行间距充足）
+            // 定时运行卡片（居中，与录制组件同宽，参考Apple设计：行间距充足，自适应高度）
             _scheduleCard = new Panel
             {
-                Location = new Point((400 - cardWidth) / 2, 210), // 从180增加到210，增加与录制卡片的间距
-                Size = new Size(cardWidth, 60), // 默认关闭状态60px（增加高度），开启后动态调整
-                BackColor = Color.FromArgb(248, 248, 248) // Apple浅灰背景
+                Size = new Size(cardWidth, 60), // 默认关闭状态60px，开启后动态调整
+                BackColor = Color.FromArgb(248, 248, 248), // Apple浅灰背景
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right // 自适应宽度
             };
+            // 居中计算将在Resize事件中处理
+            CenterCard(_scheduleCard, 210);
             DrawRoundedPanel(_scheduleCard, 8);
 
             // 开关和标签（始终显示，参考Apple设计：增加行间距）
@@ -200,7 +203,7 @@ namespace AutoDaily.UI.Forms
                 Format = DateTimePickerFormat.Custom,
                 CustomFormat = "HH:mm", // 只显示时:分，不显示秒
                 ShowUpDown = true,
-                Size = new Size(80, 25),
+                Size = new Size(90, 28), // 增加宽度和高度，确保时间不超出
                 Location = new Point(60, 57), // 从47调整到57，增加行间距
                 Font = new Font("Microsoft YaHei", FONT_SIZE_TIME, FontStyle.Regular),
                 Visible = false
@@ -309,15 +312,19 @@ namespace AutoDaily.UI.Forms
             }
             
             // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（参考Apple设计：自适应高度）
-            int cardWidth = 320; // 与录制组件同宽
+            int cardWidth = 300; // 与录制组件同宽
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(cardWidth, 150); // 从130增加到150，容纳时间配置和提示信息，增加行间距
+                // 自适应高度：根据内容计算所需高度
+                _scheduleCard.Size = new Size(cardWidth, 160); // 增加到160，确保所有内容可见
             }
             else
             {
-                _scheduleCard.Size = new Size(cardWidth, 60); // 从50增加到60，增加关闭状态高度
+                _scheduleCard.Size = new Size(cardWidth, 60);
             }
+            
+            // 重新居中卡片
+            CenterCard(_scheduleCard, 210);
             
             // 重新绘制圆角区域，确保内容不被裁剪
             DrawRoundedPanel(_scheduleCard, 8);

@@ -396,6 +396,16 @@ namespace AutoDaily.Core.Engine
                 
                 screenX = windowLeft + action.X;
                 screenY = windowTop + action.Y;
+                
+                // 验证相对坐标是否合理（防止异常坐标）
+                int windowWidth = rect.Right - rect.Left;
+                int windowHeight = rect.Bottom - rect.Top;
+                if (action.X < -100 || action.X > windowWidth + 100 || 
+                    action.Y < -100 || action.Y > windowHeight + 100)
+                {
+                    LogService.LogWarning($"警告: 鼠标移动相对坐标异常 ({action.X}, {action.Y})，跳过");
+                    return;
+                }
             }
             else
             {

@@ -142,17 +142,17 @@ namespace AutoDaily.Core.Engine
                 {
                     User32.GetWindowRect(hwnd, out var rect);
                     
-                    // 使用目标窗口的位置
-                    if (_targetWindow != null && _targetWindow.WindowLeft != 0 && _targetWindow.WindowTop != 0)
-                    {
-                        rect.Left = _targetWindow.WindowLeft;
-                        rect.Top = _targetWindow.WindowTop;
-                        rect.Right = rect.Left + _targetWindow.Rect.Width;
-                        rect.Bottom = rect.Top + _targetWindow.Rect.Height;
-                    }
-                    
+                    // 计算相对坐标（使用实际窗口位置，不要覆盖）
                     int relX = point.X - rect.Left;
                     int relY = point.Y - rect.Top;
+                    
+                    // 验证相对坐标是否合理（防止计算错误）
+                    if (relX < -1000 || relX > 10000 || relY < -1000 || relY > 10000)
+                    {
+                        // 坐标异常，跳过
+                        LogService.LogWarning($"警告: 相对坐标异常 ({relX}, {relY})，跳过");
+                        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+                    }
 
                     // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
                     if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
