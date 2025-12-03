@@ -42,14 +42,15 @@ namespace AutoDaily.UI.Forms
         private User32.LowLevelProc _hotkeyHookProc;
         private NotifyIcon _notifyIcon; // 系统托盘图标
 
-        // 字号规范常量
-        private const float FONT_SIZE_TITLE = 13f;      // 标题（状态指示灯）
-        private const float FONT_SIZE_BUTTON = 12f;     // 按钮文字
-        private const float FONT_SIZE_LABEL = 10f;      // 标签文字（定时运行、每天等）
-        private const float FONT_SIZE_HINT = 9f;        // 提示文字（录制新动作、运行跑一遍）
-        private const float FONT_SIZE_TIME = 10f;       // 时间选择器
-        private const float FONT_SIZE_NEXT_RUN = 9f;   // 下次运行提示
-        private const float FONT_SIZE_WARNING = 8f;     // 警告提示
+        // 字号规范常量（参考 Apple Human Interface Guidelines）
+        // 原则：清晰易读、层次分明、最小字号不小于 11pt
+        private const float FONT_SIZE_TITLE = 16f;      // 标题（状态指示灯）- 增大以提高可读性
+        private const float FONT_SIZE_BUTTON = 14f;     // 按钮文字 - 主要操作，需要突出
+        private const float FONT_SIZE_LABEL = 12f;      // 标签文字（定时运行、每天等）- 重要信息
+        private const float FONT_SIZE_HINT = 11f;       // 提示文字（录制新动作、运行跑一遍）- 最小字号
+        private const float FONT_SIZE_TIME = 12f;       // 时间选择器 - 重要信息
+        private const float FONT_SIZE_NEXT_RUN = 11f;   // 下次运行提示 - 次要信息
+        private const float FONT_SIZE_WARNING = 11f;    // 警告提示 - 需要清晰可见
 
         public MainForm()
         {

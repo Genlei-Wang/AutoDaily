@@ -6,10 +6,11 @@ namespace AutoDaily.UI.Forms
 {
     public partial class OverlayForm : Form
     {
-        // 字号规范常量
-        private const float FONT_SIZE_STATUS = 10f;     // 状态文字
-        private const float FONT_SIZE_TIME = 9f;        // 时间文字
-        private const float FONT_SIZE_BUTTON = 9f;      // 按钮文字
+        // 字号规范常量（参考 Apple Human Interface Guidelines）
+        // 原则：清晰易读、层次分明、最小字号不小于 11pt
+        private const float FONT_SIZE_STATUS = 12f;     // 状态文字 - 重要信息
+        private const float FONT_SIZE_TIME = 11f;       // 时间文字 - 次要信息
+        private const float FONT_SIZE_BUTTON = 11f;     // 按钮文字 - 操作按钮
 
         private Label _statusLabel;
         private Label _timeLabel;

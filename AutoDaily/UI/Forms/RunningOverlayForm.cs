@@ -7,11 +7,12 @@ namespace AutoDaily.UI.Forms
 {
     public partial class RunningOverlayForm : Form
     {
-        // 字号规范常量
-        private const float FONT_SIZE_TITLE = 11f;      // 标题
-        private const float FONT_SIZE_STATUS = 9f;      // 状态文字
-        private const float FONT_SIZE_WARNING = 8f;     // 警告提示
-        private const float FONT_SIZE_HINT = 7f;        // 小提示
+        // 字号规范常量（参考 Apple Human Interface Guidelines）
+        // 原则：清晰易读、层次分明、最小字号不小于 11pt
+        private const float FONT_SIZE_TITLE = 13f;      // 标题 - 突出显示
+        private const float FONT_SIZE_STATUS = 11f;     // 状态文字 - 重要信息
+        private const float FONT_SIZE_WARNING = 11f;    // 警告提示 - 需要清晰可见
+        private const float FONT_SIZE_HINT = 10f;       // 小提示 - 最小字号
 
         private Label _titleLabel;
         private Label _statusLabel;
