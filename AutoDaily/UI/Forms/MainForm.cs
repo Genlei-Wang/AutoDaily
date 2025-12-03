@@ -736,6 +736,28 @@ namespace AutoDaily.UI.Forms
             base.OnFormClosing(e);
         }
 
+        private void CenterCard(Panel card, int top)
+        {
+            // 居中卡片
+            int cardWidth = card.Width;
+            int windowWidth = this.ClientSize.Width;
+            card.Location = new Point((windowWidth - cardWidth) / 2, top);
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            // 窗口大小改变时，重新居中卡片
+            if (_operationCard != null)
+            {
+                CenterCard(_operationCard, 70);
+            }
+            if (_scheduleCard != null)
+            {
+                int top = _scheduleCard.Location.Y;
+                CenterCard(_scheduleCard, top);
+            }
+        }
+
         private void DrawRoundedPanel(Panel panel, int radius)
         {
             var path = new GraphicsPath();
