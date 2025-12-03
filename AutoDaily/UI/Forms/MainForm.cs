@@ -257,6 +257,9 @@ namespace AutoDaily.UI.Forms
                 _scheduleCard.Size = new Size(360, 50);
             }
             
+            // 重新绘制圆角区域，确保内容不被裁剪
+            DrawRoundedPanel(_scheduleCard, 8);
+            
             UpdateRunButtonState();
             UpdateNextRunTime();
         }
@@ -497,6 +500,9 @@ namespace AutoDaily.UI.Forms
             {
                 _scheduleCard.Size = new Size(360, 50);
             }
+            
+            // 重新绘制圆角区域，确保内容不被裁剪
+            DrawRoundedPanel(_scheduleCard, 8);
             
             UpdateNextRunTime();
         }
