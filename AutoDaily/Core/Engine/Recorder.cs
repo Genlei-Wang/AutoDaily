@@ -129,15 +129,27 @@ namespace AutoDaily.Core.Engine
                 if (timeSinceLastAction < DEBOUNCE_MS)
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
 
-                var hwnd = User32.GetForegroundWindow();
+                // 获取鼠标点击时的窗口（使用WindowFromPoint更准确）
+                User32.GetCursorPos(out var point);
+                var hwnd = User32.WindowFromPoint(point);
+                
+                // 如果WindowFromPoint返回0，则使用前台窗口
+                if (hwnd == IntPtr.Zero)
+                {
+                    hwnd = User32.GetForegroundWindow();
+                }
+                
                 if (hwnd != IntPtr.Zero)
                 {
+                    // 获取窗口的客户区矩形（更准确的坐标计算）
                     User32.GetWindowRect(hwnd, out var rect);
-                    User32.GetCursorPos(out var point);
-
-                    // 转换为相对坐标
+                    
+                    // 转换为相对坐标（相对于窗口客户区）
                     int relX = point.X - rect.Left;
                     int relY = point.Y - rect.Top;
+                    
+                    // 记录日志以便调试
+                    System.Diagnostics.Debug.WriteLine($"录制点击: 屏幕({point.X},{point.Y}) 窗口({rect.Left},{rect.Top}) 相对({relX},{relY})");
 
                     if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
                     {

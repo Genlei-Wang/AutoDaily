@@ -67,9 +67,20 @@ namespace AutoDaily.Core.Engine
             User32.SetForegroundWindow(hwnd);
             Thread.Sleep(500); // 等待窗口激活
 
-            // 再次验证窗口位置
+            // 再次验证窗口位置和大小
             User32.GetWindowRect(hwnd, out var windowRect);
-            LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={windowRect.Right - windowRect.Left}, Height={windowRect.Bottom - windowRect.Top}");
+            int currentWidth = windowRect.Right - windowRect.Left;
+            int currentHeight = windowRect.Bottom - windowRect.Top;
+            LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={currentWidth}, Height={currentHeight}");
+            
+            // 如果窗口大小与录制时不一致，记录警告
+            if (task.TargetWindow?.Rect != null)
+            {
+                if (currentWidth != task.TargetWindow.Rect.Width || currentHeight != task.TargetWindow.Rect.Height)
+                {
+                    LogService.LogWarning($"窗口大小不匹配: 录制时({task.TargetWindow.Rect.Width}x{task.TargetWindow.Rect.Height}) vs 当前({currentWidth}x{currentHeight})");
+                }
+            }
 
             // 4. 执行动作序列
             if (task.Actions == null || task.Actions.Count == 0)
@@ -202,9 +213,18 @@ namespace AutoDaily.Core.Engine
             int screenX, screenY;
             if (action.Relative)
             {
+                // 使用窗口左上角 + 相对坐标 = 屏幕坐标
                 screenX = rect.Left + action.X;
                 screenY = rect.Top + action.Y;
                 LogService.Log($"相对坐标转换: 窗口({rect.Left},{rect.Top}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
+                
+                // 验证坐标是否在窗口范围内（防止坐标错误）
+                int windowWidth = rect.Right - rect.Left;
+                int windowHeight = rect.Bottom - rect.Top;
+                if (action.X < 0 || action.X > windowWidth || action.Y < 0 || action.Y > windowHeight)
+                {
+                    LogService.LogWarning($"警告: 相对坐标({action.X},{action.Y})超出窗口范围({windowWidth}x{windowHeight})");
+                }
             }
             else
             {
@@ -213,15 +233,17 @@ namespace AutoDaily.Core.Engine
                 LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
             }
 
-            // 验证坐标在屏幕范围内 (改为使用VirtualScreen以支持多显示器)
+            // 验证坐标在屏幕范围内
             var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            int originalX = screenX;
-            int originalY = screenY;
-            
-            // 仅当坐标完全在屏幕外时才限制，但在多屏环境下简单的限制可能也不对
-            // 这里放宽限制，信任GetWindowRect的结果
-            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
-            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            if (screenX < screenBounds.Left || screenX > screenBounds.Right || 
+                screenY < screenBounds.Top || screenY > screenBounds.Bottom)
+            {
+                LogService.LogWarning($"警告: 屏幕坐标({screenX},{screenY})超出屏幕范围({screenBounds.Width}x{screenBounds.Height})");
+                // 限制到屏幕范围内
+                screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+                screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+                LogService.LogWarning($"坐标已限制为: ({screenX},{screenY})");
+            }
             
             // 平滑移动鼠标（参考TinyTask的实现）
             SmoothMoveMouse(screenX, screenY);

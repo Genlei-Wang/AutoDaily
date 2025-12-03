@@ -11,6 +11,7 @@ using AutoDaily.Core.Models;
 using AutoDaily.Core.Native;
 using AutoDaily.Core.Services;
 using AutoDaily.UI.Controls;
+using System.Runtime.InteropServices;
 
 namespace AutoDaily.UI.Forms
 {
@@ -37,6 +38,8 @@ namespace AutoDaily.UI.Forms
 
         private bool _isRecording = false;
         private bool _isRunning = false;
+        private IntPtr _hotkeyHook = IntPtr.Zero;
+        private User32.LowLevelProc _hotkeyHookProc;
 
         public MainForm()
         {
@@ -49,7 +52,10 @@ namespace AutoDaily.UI.Forms
         private void InitializeComponent()
         {
             Text = "AutoDaily 日报助手";
-            Size = new Size(420, 280);
+            // 设置DPI感知模式，确保窗口大小正确缩放
+            AutoScaleMode = AutoScaleMode.Dpi;
+            // 基础尺寸400x600，会根据DPI自动缩放
+            Size = new Size(400, 600);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -70,7 +76,7 @@ namespace AutoDaily.UI.Forms
             _operationCard = new Panel
             {
                 Location = new Point(20, 50),
-                Size = new Size(380, 100),
+                Size = new Size(360, 120),
                 BackColor = Color.White
             };
             DrawRoundedPanel(_operationCard, 8);
@@ -135,8 +141,8 @@ namespace AutoDaily.UI.Forms
             // 定时运行卡片
             _scheduleCard = new Panel
             {
-                Location = new Point(20, 160),
-                Size = new Size(380, 90),
+                Location = new Point(20, 180),
+                Size = new Size(360, 100),
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
@@ -444,18 +450,67 @@ namespace AutoDaily.UI.Forms
 
         private void RegisterHotKey()
         {
-            // 注册F10热键用于紧急停止（F12常被占用）
+            // 使用两种方式注册热键，确保可靠性
+            // 方式1: RegisterHotKey（适用于窗口有焦点时）
             try
             {
                 if (!User32.RegisterHotKey(Handle, 1, User32.MOD_NONE, User32.VK_F10))
                 {
-                    System.Diagnostics.Debug.WriteLine("F10热键注册失败");
+                    System.Diagnostics.Debug.WriteLine("F10热键注册失败（RegisterHotKey）");
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"注册热键错误: {ex.Message}");
             }
+            
+            // 方式2: 低级键盘钩子（全局捕获，即使窗口失去焦点也能工作）
+            try
+            {
+                _hotkeyHookProc = HotkeyHookProc;
+                _hotkeyHook = User32.SetWindowsHookEx(
+                    User32.WH_KEYBOARD_LL,
+                    _hotkeyHookProc,
+                    Kernel32.GetModuleHandle(null),
+                    0);
+                
+                if (_hotkeyHook == IntPtr.Zero)
+                {
+                    System.Diagnostics.Debug.WriteLine("F10热键钩子注册失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"注册热键钩子错误: {ex.Message}");
+            }
+        }
+        
+        private IntPtr HotkeyHookProc(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            // 只在运行时响应F10
+            if (nCode >= 0 && _isRunning)
+            {
+                if (wParam == (IntPtr)User32.WM_KEYDOWN || wParam == (IntPtr)User32.WM_SYSKEYDOWN)
+                {
+                    int vkCode = System.Runtime.InteropServices.Marshal.ReadInt32(lParam);
+                    if (vkCode == User32.VK_F10)
+                    {
+                        // 在UI线程中执行停止操作
+                        if (InvokeRequired)
+                        {
+                            Invoke(new System.Action(() => StopRunning()));
+                        }
+                        else
+                        {
+                            StopRunning();
+                        }
+                        // 返回非零值表示已处理，阻止传递给其他程序
+                        return new IntPtr(1);
+                    }
+                }
+            }
+            
+            return User32.CallNextHookEx(_hotkeyHook, nCode, wParam, lParam);
         }
 
         protected override void WndProc(ref Message m)
@@ -485,7 +540,16 @@ namespace AutoDaily.UI.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // 卸载热键
             User32.UnregisterHotKey(Handle, 1);
+            
+            // 卸载键盘钩子
+            if (_hotkeyHook != IntPtr.Zero)
+            {
+                User32.UnhookWindowsHookEx(_hotkeyHook);
+                _hotkeyHook = IntPtr.Zero;
+            }
+            
             _scheduleService?.Dispose();
             _recorder?.Dispose();
             base.OnFormClosing(e);
