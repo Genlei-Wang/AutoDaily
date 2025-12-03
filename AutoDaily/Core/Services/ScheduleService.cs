@@ -17,8 +17,9 @@ namespace AutoDaily.Core.Services
             _taskService = taskService;
             _onTaskTriggered = onTaskTriggered;
 
-            // 启动定时器，每10秒检查一次（更频繁检查，确保不错过时间点）
-            _timer = new Timer(10000); // 10秒
+            // 参考system Scheduler：使用1秒检查间隔，确保精确触发
+            // 计算到下一个整分钟的剩余时间，然后每1秒检查一次
+            _timer = new Timer(1000); // 1秒检查一次，确保精确
             _timer.Elapsed += Timer_Elapsed;
             _timer.AutoReset = true;
             _timer.Start();
@@ -42,8 +43,10 @@ namespace AutoDaily.Core.Services
             var scheduleTime = new DateTime(now.Year, now.Month, now.Day, 
                 task.Schedule.Hour, task.Schedule.Minute, 0);
 
-            // 检查是否到了预定时间（允许前后5分钟的窗口）
-            bool isTimeWindow = Math.Abs((now - scheduleTime).TotalMinutes) <= 5;
+            // 精确时间检查：当前时间 >= 设定时间，且在同一分钟内
+            // 允许最多30秒的误差（考虑到检查间隔和系统延迟）
+            bool isTimeReached = now >= scheduleTime && 
+                (now - scheduleTime).TotalSeconds <= 30;
             
             // 检查今天是否已经运行过
             bool notRunToday = !task.LastRun.HasValue || task.LastRun.Value.Date != now.Date;
@@ -52,7 +55,7 @@ namespace AutoDaily.Core.Services
             bool notRecentlyTriggered = !_lastTriggerTime.HasValue || 
                 (now - _lastTriggerTime.Value).TotalMinutes >= 1;
 
-            if (isTimeWindow && notRunToday && notRecentlyTriggered)
+            if (isTimeReached && notRunToday && notRecentlyTriggered)
             {
                 _lastTriggerTime = now;
                 // 更新最后运行时间，防止重复触发

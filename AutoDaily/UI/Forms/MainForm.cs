@@ -57,10 +57,10 @@ namespace AutoDaily.UI.Forms
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
             
-            // 基础尺寸400x750（在96 DPI下），增加高度以容纳定时运行配置（开启后110px，需要更多空间）
+            // 基础尺寸400x600（在96 DPI下）
             // WinForms的AutoScaleMode.Dpi会自动根据系统DPI缩放窗口和控件
-            Size = new Size(400, 750);
-            MinimumSize = new Size(400, 750);
+            Size = new Size(400, 600);
+            MinimumSize = new Size(400, 600);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -77,10 +77,10 @@ namespace AutoDaily.UI.Forms
                 AutoSize = true
             };
 
-            // 核心操作区卡片
+            // 核心操作区卡片（居中）
             _operationCard = new Panel
             {
-                Location = new Point(20, 50),
+                Location = new Point((400 - 360) / 2, 50), // 居中：(窗口宽度 - 卡片宽度) / 2
                 Size = new Size(360, 120),
                 BackColor = Color.White
             };
@@ -143,11 +143,11 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片
+            // 定时运行卡片（居中，高度与录制组件一致120px）
             _scheduleCard = new Panel
             {
-                Location = new Point(20, 180),
-                Size = new Size(360, 50), // 默认关闭状态50px，开启后动态调整为110px
+                Location = new Point((400 - 360) / 2, 180), // 居中
+                Size = new Size(360, 120), // 与录制组件高度一致
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
@@ -162,7 +162,7 @@ namespace AutoDaily.UI.Forms
 
             _scheduleTimeLabel = new Label
             {
-                Text = "自动运行",
+                Text = "定时运行",
                 Font = new Font("Microsoft YaHei", 9),
                 ForeColor = Color.FromArgb(100, 100, 100),
                 Location = new Point(80, 18),
@@ -184,7 +184,8 @@ namespace AutoDaily.UI.Forms
             _timePicker = new DateTimePicker
             {
                 Name = "ScheduleTimeConfig",
-                Format = DateTimePickerFormat.Time,
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "HH:mm", // 只显示时:分，不显示秒
                 ShowUpDown = true,
                 Size = new Size(80, 25),
                 Location = new Point(60, 47),
@@ -200,7 +201,7 @@ namespace AutoDaily.UI.Forms
                 Text = "*下次运行：明天 09:00",
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(20, 80),
+                Location = new Point(20, 85), // 增加行间距
                 AutoSize = true,
                 Visible = false
             };
@@ -247,14 +248,14 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（高度与录制组件一致120px）
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 110);
+                _scheduleCard.Size = new Size(360, 120); // 与录制组件高度一致
             }
             else
             {
-                _scheduleCard.Size = new Size(360, 50);
+                _scheduleCard.Size = new Size(360, 50); // 仅显示开关
             }
             
             // 重新绘制圆角区域，确保内容不被裁剪
@@ -491,14 +492,14 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小（根据文档：关闭状态50px，开启状态110px）
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（高度与录制组件一致120px）
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 110);
+                _scheduleCard.Size = new Size(360, 120); // 与录制组件高度一致
             }
             else
             {
-                _scheduleCard.Size = new Size(360, 50);
+                _scheduleCard.Size = new Size(360, 50); // 仅显示开关
             }
             
             // 重新绘制圆角区域，确保内容不被裁剪
