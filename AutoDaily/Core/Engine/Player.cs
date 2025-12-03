@@ -367,14 +367,35 @@ namespace AutoDaily.Core.Engine
             // 重新获取窗口位置
             if (!User32.GetWindowRect(hwnd, out var rect))
             {
+                LogService.LogWarning("无法获取窗口位置，跳过鼠标移动");
                 return;
             }
             
             int screenX, screenY;
             if (action.Relative)
             {
-                screenX = rect.Left + action.X;
-                screenY = rect.Top + action.Y;
+                // 关键修复：优先使用录制时保存的窗口位置（与PerformMouseClick保持一致）
+                int windowLeft = rect.Left;
+                int windowTop = rect.Top;
+                
+                if (_currentTask?.TargetWindow != null && 
+                    _currentTask.TargetWindow.WindowLeft != 0 && 
+                    _currentTask.TargetWindow.WindowTop != 0)
+                {
+                    int currentWidth = rect.Right - rect.Left;
+                    int currentHeight = rect.Bottom - rect.Top;
+                    
+                    if (_currentTask.TargetWindow.Rect != null &&
+                        Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
+                        Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
+                    {
+                        windowLeft = _currentTask.TargetWindow.WindowLeft;
+                        windowTop = _currentTask.TargetWindow.WindowTop;
+                    }
+                }
+                
+                screenX = windowLeft + action.X;
+                screenY = windowTop + action.Y;
             }
             else
             {
@@ -382,10 +403,10 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            // 验证坐标在屏幕范围内 (改为使用VirtualScreen)
-            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
-            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            // 验证坐标在屏幕范围内，防止移动到屏幕边缘
+            var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+            screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
 
             // 平滑移动鼠标
             SmoothMoveMouse(screenX, screenY);

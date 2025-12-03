@@ -77,23 +77,23 @@ namespace AutoDaily.UI.Forms
             MaximizeBox = false;
             MinimizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.FromArgb(243, 243, 243); // #F3F3F3
+            BackColor = Color.FromArgb(242, 242, 247); // Apple系统背景色
 
-            // 状态指示灯
+            // 状态指示灯（参考Apple设计：顶部留白更多）
             _statusIndicator = new Label
             {
                 Text = "🟢 就绪",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_TITLE, FontStyle.Bold),
-                ForeColor = Color.FromArgb(76, 175, 80),
-                Location = new Point(20, 20),
+                ForeColor = Color.FromArgb(76, 175, 80), // Apple绿色
+                Location = new Point(20, 30), // 从20增加到30，增加顶部间距
                 AutoSize = true
             };
 
-            // 核心操作区卡片（居中，减小宽度增加左右边距）
-            int cardWidth = 340; // 从360减小到340，增加左右边距
+            // 核心操作区卡片（居中，参考Apple设计：卡片宽度适中，左右边距充足）
+            int cardWidth = 320; // 从340减小到320，增加左右边距（各40px）
             _operationCard = new Panel
             {
-                Location = new Point((400 - cardWidth) / 2, 50), // 居中
+                Location = new Point((400 - cardWidth) / 2, 70), // 从50增加到70，增加与状态指示灯的间距
                 Size = new Size(cardWidth, 120),
                 BackColor = Color.White
             };
@@ -156,12 +156,12 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（居中，与录制组件同宽，开启后高度约130px以容纳提示信息）
+            // 定时运行卡片（居中，与录制组件同宽，参考Apple设计：行间距充足）
             _scheduleCard = new Panel
             {
-                Location = new Point((400 - cardWidth) / 2, 180), // 居中，与录制组件对齐
-                Size = new Size(cardWidth, 50), // 默认关闭状态50px，开启后动态调整为130px
-                BackColor = Color.FromArgb(250, 250, 250)
+                Location = new Point((400 - cardWidth) / 2, 210), // 从180增加到210，增加与录制卡片的间距
+                Size = new Size(cardWidth, 60), // 默认关闭状态60px（增加高度），开启后动态调整
+                BackColor = Color.FromArgb(248, 248, 248) // Apple浅灰背景
             };
             DrawRoundedPanel(_scheduleCard, 8);
 
@@ -308,15 +308,15 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（包含提示信息）
-            int cardWidth = 340; // 与录制组件同宽
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（参考Apple设计：自适应高度）
+            int cardWidth = 320; // 与录制组件同宽
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(cardWidth, 130); // 容纳时间配置和提示信息
+                _scheduleCard.Size = new Size(cardWidth, 150); // 从130增加到150，容纳时间配置和提示信息，增加行间距
             }
             else
             {
-                _scheduleCard.Size = new Size(cardWidth, 50); // 仅显示开关
+                _scheduleCard.Size = new Size(cardWidth, 60); // 从50增加到60，增加关闭状态高度
             }
             
             // 重新绘制圆角区域，确保内容不被裁剪
