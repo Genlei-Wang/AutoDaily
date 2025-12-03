@@ -40,11 +40,13 @@ namespace AutoDaily.UI.Forms
         private bool _isRunning = false;
         private IntPtr _hotkeyHook = IntPtr.Zero;
         private User32.LowLevelProc _hotkeyHookProc;
+        private NotifyIcon _notifyIcon; // 系统托盘图标
 
         public MainForm()
         {
             InitializeComponent();
             InitializeServices();
+            InitializeNotifyIcon();
             LoadTaskData();
             RegisterHotKey();
         }
@@ -143,11 +145,11 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（居中，高度与录制组件一致120px）
+            // 定时运行卡片（居中，开启后高度约130px以容纳提示信息）
             _scheduleCard = new Panel
             {
                 Location = new Point((400 - 360) / 2, 180), // 居中
-                Size = new Size(360, 120), // 与录制组件高度一致
+                Size = new Size(360, 50), // 默认关闭状态50px，开启后动态调整为130px
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
@@ -206,11 +208,24 @@ namespace AutoDaily.UI.Forms
                 Visible = false
             };
 
+            // 定时运行提示信息（开启后显示）
+            var scheduleHintLabel = new Label
+            {
+                Name = "ScheduleTimeConfig",
+                Text = "⚠️ 请保持软件运行，不要关闭或让电脑睡眠",
+                Font = new Font("Microsoft YaHei", 7),
+                ForeColor = Color.FromArgb(255, 152, 0), // 橙色提示
+                Location = new Point(20, 105),
+                Size = new Size(320, 15),
+                Visible = false
+            };
+
             _scheduleCard.Controls.Add(_scheduleToggle);
             _scheduleCard.Controls.Add(_scheduleTimeLabel);
             _scheduleCard.Controls.Add(scheduleLabel);
             _scheduleCard.Controls.Add(_timePicker);
             _scheduleCard.Controls.Add(_nextRunLabel);
+            _scheduleCard.Controls.Add(scheduleHintLabel);
 
             Controls.Add(_statusIndicator);
             Controls.Add(_operationCard);
@@ -228,6 +243,40 @@ namespace AutoDaily.UI.Forms
             _recorder.OnStatusUpdate += Recorder_OnStatusUpdate;
             _player.OnStatusUpdate += Player_OnStatusUpdate;
             _player.OnProgressUpdate += Player_OnProgressUpdate;
+        }
+
+        private void InitializeNotifyIcon()
+        {
+            // 创建系统托盘图标
+            _notifyIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Application, // 使用默认图标，可以后续替换为自定义图标
+                Text = "AutoDaily 日报助手",
+                Visible = false // 默认不显示，只在需要时显示
+            };
+
+            // 创建上下文菜单
+            var contextMenu = new ContextMenuStrip();
+            contextMenu.Items.Add("显示窗口", null, (s, e) => 
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+                this.Activate();
+            });
+            contextMenu.Items.Add("退出", null, (s, e) => 
+            {
+                _notifyIcon.Visible = false;
+                Application.Exit();
+            });
+            _notifyIcon.ContextMenuStrip = contextMenu;
+
+            // 双击托盘图标显示窗口
+            _notifyIcon.DoubleClick += (s, e) =>
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+                this.Activate();
+            };
         }
 
         private void LoadTaskData()
@@ -248,10 +297,10 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（高度与录制组件一致120px）
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（包含提示信息）
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 120); // 与录制组件高度一致
+                _scheduleCard.Size = new Size(360, 130); // 容纳时间配置和提示信息
             }
             else
             {
@@ -492,10 +541,10 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（高度与录制组件一致120px）
+            // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（包含提示信息）
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 120); // 与录制组件高度一致
+                _scheduleCard.Size = new Size(360, 130); // 容纳时间配置和提示信息
             }
             else
             {
@@ -621,6 +670,25 @@ namespace AutoDaily.UI.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // 检查是否启用了定时运行
+            var task = _taskService.GetCurrentTask();
+            if (task.Schedule.Enabled)
+            {
+                // 如果启用了定时运行，提示用户
+                var result = MessageBox.Show(
+                    "关闭软件后将无法执行定时运行任务。\n\n是否确定要关闭？",
+                    "提示",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2);
+                
+                if (result == DialogResult.No)
+                {
+                    e.Cancel = true; // 取消关闭
+                    return;
+                }
+            }
+
             // 卸载热键
             User32.UnregisterHotKey(Handle, 1);
             
@@ -630,6 +698,9 @@ namespace AutoDaily.UI.Forms
                 User32.UnhookWindowsHookEx(_hotkeyHook);
                 _hotkeyHook = IntPtr.Zero;
             }
+            
+            // 清理系统托盘
+            _notifyIcon?.Dispose();
             
             _scheduleService?.Dispose();
             _recorder?.Dispose();

@@ -17,9 +17,11 @@ namespace AutoDaily.Core.Services
             _taskService = taskService;
             _onTaskTriggered = onTaskTriggered;
 
-            // 参考system Scheduler：使用1秒检查间隔，确保精确触发
-            // 计算到下一个整分钟的剩余时间，然后每1秒检查一次
-            _timer = new Timer(1000); // 1秒检查一次，确保精确
+            // 智能调度：根据距离目标时间的远近动态调整检查间隔
+            // 距离目标时间 > 5分钟：每60秒检查一次
+            // 距离目标时间 1-5分钟：每10秒检查一次
+            // 距离目标时间 < 1分钟：每1秒检查一次（精确触发）
+            _timer = new Timer(60000); // 初始60秒检查
             _timer.Elapsed += Timer_Elapsed;
             _timer.AutoReset = true;
             _timer.Start();
@@ -28,6 +30,43 @@ namespace AutoDaily.Core.Services
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             CheckSchedule();
+            AdjustTimerInterval(); // 动态调整检查间隔
+        }
+
+        private void AdjustTimerInterval()
+        {
+            var task = _taskService.GetCurrentTask();
+            if (!task.Schedule.Enabled)
+            {
+                _timer.Interval = 60000; // 未启用时，60秒检查一次
+                return;
+            }
+
+            var now = DateTime.Now;
+            var scheduleTime = new DateTime(now.Year, now.Month, now.Day, 
+                task.Schedule.Hour, task.Schedule.Minute, 0);
+            
+            // 如果今天已经过了，计算明天的
+            if (now > scheduleTime)
+            {
+                scheduleTime = scheduleTime.AddDays(1);
+            }
+
+            var timeUntilSchedule = (scheduleTime - now).TotalMinutes;
+
+            // 动态调整检查间隔
+            if (timeUntilSchedule > 5)
+            {
+                _timer.Interval = 60000; // > 5分钟：每60秒检查
+            }
+            else if (timeUntilSchedule > 1)
+            {
+                _timer.Interval = 10000; // 1-5分钟：每10秒检查
+            }
+            else
+            {
+                _timer.Interval = 1000; // < 1分钟：每1秒检查（精确触发）
+            }
         }
 
         private void CheckSchedule()
@@ -45,6 +84,7 @@ namespace AutoDaily.Core.Services
 
             // 精确时间检查：当前时间 >= 设定时间，且在同一分钟内
             // 允许最多30秒的误差（考虑到检查间隔和系统延迟）
+            // 如果超过30秒，就不再运行（用户要求）
             bool isTimeReached = now >= scheduleTime && 
                 (now - scheduleTime).TotalSeconds <= 30;
             
