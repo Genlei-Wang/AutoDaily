@@ -274,7 +274,7 @@ namespace AutoDaily.Core.Engine
                         byte[] keyboardState = new byte[256];
                         User32.GetKeyboardState(keyboardState);
                         StringBuilder sb = new StringBuilder(10);
-                        int result = User32.ToUnicode(vkCode, 0, keyboardState, sb, sb.Capacity, 0);
+                        int result = User32.ToUnicode((uint)vkCode, 0, keyboardState, sb, sb.Capacity, 0);
                         
                         if (result > 0 && sb.Length > 0)
                         {
