@@ -57,10 +57,10 @@ namespace AutoDaily.UI.Forms
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
             
-            // 基础尺寸400x700（在96 DPI下），增加高度以容纳定时运行配置（开启后110px）
+            // 基础尺寸400x750（在96 DPI下），增加高度以容纳定时运行配置（开启后110px，需要更多空间）
             // WinForms的AutoScaleMode.Dpi会自动根据系统DPI缩放窗口和控件
-            Size = new Size(400, 700);
-            MinimumSize = new Size(400, 700);
+            Size = new Size(400, 750);
+            MinimumSize = new Size(400, 750);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -336,10 +336,11 @@ namespace AutoDaily.UI.Forms
             _recordButton.ForeColor = Color.FromArgb(244, 67, 54);
 
             // 恢复主窗口显示
-            this.WindowState = FormWindowState.Normal;
             this.Show();
+            this.WindowState = FormWindowState.Normal;
             this.Activate();
 
+            // 清理弹窗（录制时已不创建，这里只是确保清理）
             _overlayForm?.Close();
             _overlayForm = null;
 
@@ -398,8 +399,8 @@ namespace AutoDaily.UI.Forms
 
             LogService.LogUserAction("开始运行任务");
 
-            // 运行时最小化主窗口，避免遮挡
-            this.WindowState = FormWindowState.Minimized;
+            // 运行时隐藏主窗口，只显示进度弹窗
+            this.Hide();
 
             _runningOverlay = new RunningOverlayForm();
             _runningOverlay.Show();
@@ -430,8 +431,8 @@ namespace AutoDaily.UI.Forms
                 _recordButton.Enabled = true;
                 
                 // 恢复主窗口显示
-                this.WindowState = FormWindowState.Normal;
                 this.Show();
+                this.WindowState = FormWindowState.Normal;
                 this.Activate();
             }
         }

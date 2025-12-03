@@ -114,6 +114,9 @@ namespace AutoDaily.Core.Native
         public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, 
             [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
+        [DllImport("user32.dll")]
+        public static extern short VkKeyScan(char ch);
+
         public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [StructLayout(LayoutKind.Sequential)]

@@ -267,20 +267,26 @@ namespace AutoDaily.Core.Engine
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
                     }
 
-                    // 记录可见字符输入（字母、数字等）
+                    // 记录可见字符输入（字母、数字、符号等）
+                    // 使用ToUnicode将虚拟键码转换为字符，支持所有可打印字符
                     try
                     {
-                        // 使用ToUnicode将虚拟键码转换为字符
                         byte[] keyboardState = new byte[256];
-                        User32.GetKeyboardState(keyboardState);
+                        if (!User32.GetKeyboardState(keyboardState))
+                        {
+                            return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                        }
+                        
                         StringBuilder sb = new StringBuilder(10);
                         int result = User32.ToUnicode((uint)vkCode, 0, keyboardState, sb, sb.Capacity, 0);
                         
                         if (result > 0 && sb.Length > 0)
                         {
                             char ch = sb[0];
-                            // 记录可打印字符（字母、数字、标点等）
-                            if (char.IsLetterOrDigit(ch) || char.IsPunctuation(ch) || char.IsSymbol(ch) || ch == ' ')
+                            // 记录所有可打印字符（包括字母、数字、标点、符号、空格等）
+                            // 排除控制字符（如回车、换行等，这些已作为特殊键处理）
+                            if (!char.IsControl(ch) && (char.IsLetterOrDigit(ch) || char.IsPunctuation(ch) || 
+                                char.IsSymbol(ch) || char.IsWhiteSpace(ch) || ch > 127))
                             {
                                 AddAction(new ActionModel
                                 {
@@ -291,11 +297,16 @@ namespace AutoDaily.Core.Engine
                                 return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
                             }
                         }
+                        else if (result < 0)
+                        {
+                            // 死键（dead key），需要等待下一个按键
+                            // 暂时跳过，等待下一个按键组合
+                        }
                     }
                     catch (Exception ex)
                     {
-                        // 如果转换失败，记录为KeyPress
-                        System.Diagnostics.Debug.WriteLine($"字符转换失败: {ex.Message}");
+                        // 如果转换失败，静默处理（某些特殊键无法转换为字符是正常的）
+                        System.Diagnostics.Debug.WriteLine($"字符转换失败 (VK={vkCode}): {ex.Message}");
                     }
                 }
             }

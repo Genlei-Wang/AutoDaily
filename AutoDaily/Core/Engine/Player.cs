@@ -430,10 +430,51 @@ namespace AutoDaily.Core.Engine
 
             try
             {
+                // 使用SendInput发送字符，支持所有字符（包括中文、符号等）
                 foreach (char c in text)
                 {
-                    // 简化处理：使用SendKeys（实际应该用SendInput处理所有字符）
-                    System.Windows.Forms.SendKeys.SendWait(c.ToString());
+                    // 对于ASCII字符，使用虚拟键码
+                    if (c <= 127)
+                    {
+                        // 使用VkKeyScan获取虚拟键码
+                        short vkScan = User32.VkKeyScan(c);
+                        if (vkScan != -1)
+                        {
+                            byte vkCode = (byte)(vkScan & 0xFF);
+                            byte shiftState = (byte)((vkScan >> 8) & 0xFF);
+                            
+                            var inputs = new List<User32.INPUT>();
+                            
+                            // 如果需要Shift键（大写字母、符号等）
+                            if ((shiftState & 1) != 0)
+                            {
+                                inputs.Add(CreateKeyInput(User32.VK_SHIFT, false));
+                            }
+                            
+                            // 按下字符键
+                            inputs.Add(CreateKeyInput(vkCode, false));
+                            inputs.Add(CreateKeyInput(vkCode, true));
+                            
+                            // 释放Shift键
+                            if ((shiftState & 1) != 0)
+                            {
+                                inputs.Add(CreateKeyInput(User32.VK_SHIFT, true));
+                            }
+                            
+                            User32.SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf(typeof(User32.INPUT)));
+                        }
+                        else
+                        {
+                            // 如果VkKeyScan失败，尝试使用SendKeys作为后备
+                            System.Windows.Forms.SendKeys.SendWait(c.ToString());
+                        }
+                    }
+                    else
+                    {
+                        // 对于非ASCII字符（如中文），使用SendKeys
+                        System.Windows.Forms.SendKeys.SendWait(c.ToString());
+                    }
+                    
                     Thread.Sleep(20);
                 }
             }
