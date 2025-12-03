@@ -48,20 +48,6 @@ namespace AutoDaily.Core.Engine
                 return;
             }
 
-            // 防止操作自身
-            try
-            {
-                int currentProcessId = Process.GetCurrentProcess().Id;
-                User32.GetWindowThreadProcessId(hwnd, out uint windowProcessId);
-                if (currentProcessId == windowProcessId)
-                {
-                    OnStatusUpdate?.Invoke("错误：不能将自身作为目标窗口");
-                    LogService.LogError("尝试操作自身窗口，已阻止", null);
-                    return;
-                }
-            }
-            catch { }
-
             // 验证窗口句柄有效
             if (!User32.IsWindow(hwnd))
             {
@@ -86,14 +72,14 @@ namespace AutoDaily.Core.Engine
             LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={windowRect.Right - windowRect.Left}, Height={windowRect.Bottom - windowRect.Top}");
 
             // 4. 执行动作序列
-            if (task.Events == null || task.Events.Count == 0)
+            if (task.Actions == null || task.Actions.Count == 0)
             {
                 OnStatusUpdate?.Invoke("错误：没有录制的动作");
                 return;
             }
 
-            int totalActions = task.Events.Count;
-            for (int i = 0; i < task.Events.Count; i++)
+            int totalActions = task.Actions.Count;
+            for (int i = 0; i < task.Actions.Count; i++)
             {
                 if (token.IsCancellationRequested)
                 {
@@ -101,7 +87,7 @@ namespace AutoDaily.Core.Engine
                     return;
                 }
 
-                var action = task.Events[i];
+                var action = task.Actions[i];
                 if (action == null)
                     continue;
 
@@ -182,64 +168,7 @@ namespace AutoDaily.Core.Engine
                 case "Input":
                     PerformInput(action.Text);
                     break;
-
-                case "MouseWheel":
-                    PerformMouseWheel(action);
-                    break;
-
-                case "KeyDown":
-                    PerformKey(action, false);
-                    break;
-
-                case "KeyUp":
-                    PerformKey(action, true);
-                    break;
             }
-        }
-
-        private void PerformMouseWheel(ActionModel action)
-        {
-             var inputs = new User32.INPUT[1];
-             inputs[0] = new User32.INPUT
-             {
-                 type = User32.INPUT_MOUSE,
-                 U = new User32.InputUnion
-                 {
-                     mi = new User32.MOUSEINPUT
-                     {
-                         dx = 0,
-                         dy = 0,
-                         mouseData = (uint)action.Param,
-                         dwFlags = User32.MOUSEEVENTF_WHEEL,
-                         time = 0,
-                         dwExtraInfo = IntPtr.Zero
-                     }
-                 }
-             };
-             User32.SendInput(1, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
-             Thread.Sleep(10);
-        }
-
-        private void PerformKey(ActionModel action, bool isUp)
-        {
-             var inputs = new User32.INPUT[1];
-             inputs[0] = new User32.INPUT
-             {
-                 type = User32.INPUT_KEYBOARD,
-                 U = new User32.InputUnion
-                 {
-                     ki = new User32.KEYBDINPUT
-                     {
-                         wVk = (ushort)action.Param,
-                         wScan = 0,
-                         dwFlags = isUp ? User32.KEYEVENTF_KEYUP : 0,
-                         time = 0,
-                         dwExtraInfo = IntPtr.Zero
-                     }
-                 }
-             };
-             User32.SendInput(1, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
-             Thread.Sleep(10);
         }
 
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)
@@ -251,8 +180,6 @@ namespace AutoDaily.Core.Engine
                 return;
             }
             
-            // 使用系统虚拟屏幕坐标 (Virtual Screen Coordinates)
-            // 如果开启了 SetProcessDPIAware，GetWindowRect 返回物理坐标
             int screenX, screenY;
             if (action.Relative)
             {
@@ -267,20 +194,34 @@ namespace AutoDaily.Core.Engine
                 LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
             }
 
-            // 验证坐标在屏幕范围内 (使用VirtualScreen以支持多显示器)
-            // 暂时移除强制限制，防止误伤多屏环境下的合法坐标
-            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            // ...
-
-            // 直接使用 SetCursorPos (物理坐标)
-            // 注意：SetCursorPos 接受屏幕坐标。如果启用了 DPI 感知，它就是物理像素。
-            User32.SetCursorPos(screenX, screenY);
+            // 验证坐标在屏幕范围内 (改为使用VirtualScreen以支持多显示器)
+            var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            int originalX = screenX;
+            int originalY = screenY;
             
-            // 等待鼠标移动到位
+            // 仅当坐标完全在屏幕外时才限制，但在多屏环境下简单的限制可能也不对
+            // 这里放宽限制，信任GetWindowRect的结果
+            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            
+            // 平滑移动鼠标（参考TinyTask的实现）
+            SmoothMoveMouse(screenX, screenY);
             Thread.Sleep(50);
+
+            // 计算绝对坐标 (0-65535)
+            int screenWidth = User32.GetSystemMetrics(0); // SM_CXSCREEN
+            int screenHeight = User32.GetSystemMetrics(1); // SM_CYSCREEN
             
-            // 执行点击 - 使用 最基础的 MOUSEEVENTF_LEFTDOWN/UP，不带任何位置参数
-            // 因为鼠标已经移动到位了，我们只需要在当前位置点击
+            // 注意：GetSystemMetrics returns primary monitor size. 
+            // For multi-monitor absolute coordinates, we need to map the virtual screen coordinates to 0-65535.
+            // But SendInput MOUSEEVENTF_ABSOLUTE maps 0-65535 to the primary monitor? Or virtual screen?
+            // It maps to the primary monitor usually unless VirtualDesk is used.
+            // Let's stick to the previous approach: Move mouse then click in place.
+            // The "run to edge" issue was likely due to lack of DPI awareness or clamping to PrimaryScreen.
+            // Since we fixed DPI and clamping, we should try keeping the click in place first.
+            // If we use ABSOLUTE here, we need to be very careful about multi-monitor mapping.
+            
+            // 执行点击
             var inputs = new User32.INPUT[2];
             
             // 按下
@@ -291,10 +232,11 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = 0, // 忽略位置
-                        dy = 0, // 忽略位置
-                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTDOWN : User32.MOUSEEVENTF_RIGHTDOWN),
-                        mouseData = 0,
+                        dx = 0,
+                        dy = 0,
+                        dwFlags = action.Button == "Left" 
+                            ? User32.MOUSEEVENTF_LEFTDOWN 
+                            : User32.MOUSEEVENTF_RIGHTDOWN,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -309,10 +251,11 @@ namespace AutoDaily.Core.Engine
                 {
                     mi = new User32.MOUSEINPUT
                     {
-                        dx = 0, // 忽略位置
-                        dy = 0, // 忽略位置
-                        dwFlags = (action.Button == "Left" ? User32.MOUSEEVENTF_LEFTUP : User32.MOUSEEVENTF_RIGHTUP),
-                        mouseData = 0,
+                        dx = 0,
+                        dy = 0,
+                        dwFlags = action.Button == "Left"
+                            ? User32.MOUSEEVENTF_LEFTUP
+                            : User32.MOUSEEVENTF_RIGHTUP,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -343,27 +286,57 @@ namespace AutoDaily.Core.Engine
                 screenY = action.Y;
             }
 
-            // 直接移动鼠标 (无平滑插值，避免延迟和DPI问题)
-            // SmoothMoveMouse has been removed/replaced with direct SetCursorPos in PerformMouseClick
-            // For MouseMove event, we should also use direct SetCursorPos to be consistent.
-            User32.SetCursorPos(screenX, screenY);
-            Thread.Sleep(10);
+            // 验证坐标在屏幕范围内 (改为使用VirtualScreen)
+            // var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            // screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+            // screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+
+            // 平滑移动鼠标
+            SmoothMoveMouse(screenX, screenY);
+            Thread.Sleep(50);
         }
 
-        // SmoothMoveMouse removed to prevent DPI/Coordinate conflicts
-        // private void SmoothMoveMouse(int targetX, int targetY) { ... }
+        private void SmoothMoveMouse(int targetX, int targetY)
+        {
+            // 获取当前鼠标位置
+            User32.GetCursorPos(out var currentPoint);
+            int currentX = currentPoint.X;
+            int currentY = currentPoint.Y;
+
+            // 计算距离
+            int dx = targetX - currentX;
+            int dy = targetY - currentY;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+
+            // 如果距离很小，直接移动
+            if (distance < 5)
+            {
+                User32.SetCursorPos(targetX, targetY);
+                return;
+            }
+
+            // 平滑移动：分多步移动（参考TinyTask）
+            int steps = Math.Max(5, (int)(distance / 10)); // 每10像素一步
+            for (int i = 1; i <= steps; i++)
+            {
+                double ratio = (double)i / steps;
+                int x = currentX + (int)(dx * ratio);
+                int y = currentY + (int)(dy * ratio);
+                User32.SetCursorPos(x, y);
+                Thread.Sleep(5); // 每步间隔5ms，实现平滑效果
+            }
+        }
 
         private void PerformInput(string text)
         {
             if (string.IsNullOrEmpty(text))
                 return;
 
-            try 
+            try
             {
                 foreach (char c in text)
                 {
                     // 简化处理：使用SendKeys（实际应该用SendInput处理所有字符）
-                    // Wrap in try-catch to prevent crash on special chars
                     System.Windows.Forms.SendKeys.SendWait(c.ToString());
                     Thread.Sleep(20);
                 }

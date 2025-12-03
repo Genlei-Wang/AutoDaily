@@ -6,11 +6,11 @@ namespace AutoDaily.Core.Native
 {
     public static class User32
     {
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
         [DllImport("user32.dll")]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
@@ -65,12 +65,13 @@ namespace AutoDaily.Core.Native
         public static extern IntPtr GetModuleHandle(string lpModuleName);
 
         [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("user32.dll")]
         public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
         [DllImport("user32.dll")]
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        public const int WM_MOUSEWHEEL = 0x020A;
 
         public const int SW_SHOWNORMAL = 1;
         public const int SW_RESTORE = 9;
@@ -161,9 +162,7 @@ namespace AutoDaily.Core.Native
         public const uint MOUSEEVENTF_LEFTUP = 0x0004;
         public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
         public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
-        public const uint MOUSEEVENTF_WHEEL = 0x0800;
         public const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
-        public const uint MOUSEEVENTF_VIRTUALDESK = 0x4000;
         public const uint KEYEVENTF_KEYUP = 0x0002;
     }
 }

@@ -48,12 +48,10 @@ namespace AutoDaily.UI.Forms
 
         private void InitializeComponent()
         {
-            this.AutoScaleMode = AutoScaleMode.Dpi; // 使用Dpi模式缩放，比Font模式更适合处理高分屏布局
             Text = "AutoDaily 日报助手";
-            Size = new Size(400, 600);
-            MinimumSize = new Size(400, 600);
-            FormBorderStyle = FormBorderStyle.Sizable;
-            MaximizeBox = true;
+            Size = new Size(420, 280);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             MinimizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(243, 243, 243); // #F3F3F3
@@ -72,9 +70,8 @@ namespace AutoDaily.UI.Forms
             _operationCard = new Panel
             {
                 Location = new Point(20, 50),
-                Size = new Size(360, 100),
-                BackColor = Color.White,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Size = new Size(380, 100),
+                BackColor = Color.White
             };
             DrawRoundedPanel(_operationCard, 8);
 
@@ -88,8 +85,7 @@ namespace AutoDaily.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(244, 67, 54),
                 BackColor = Color.White,
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
+                Cursor = Cursors.Hand
             };
             _recordButton.FlatAppearance.BorderColor = Color.FromArgb(244, 67, 54);
             _recordButton.FlatAppearance.BorderSize = 2;
@@ -102,8 +98,7 @@ namespace AutoDaily.UI.Forms
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(20, 85),
-                AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
+                AutoSize = true
             };
 
             // 运行按钮
@@ -116,8 +111,7 @@ namespace AutoDaily.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(0, 122, 204), // #007ACC
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Cursor = Cursors.Hand
             };
             _runButton.FlatAppearance.BorderSize = 0;
             _runButton.Click += RunButton_Click;
@@ -129,8 +123,7 @@ namespace AutoDaily.UI.Forms
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(200, 85),
-                AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                AutoSize = true
             };
 
             _operationCard.Controls.Add(_recordButton);
@@ -142,9 +135,8 @@ namespace AutoDaily.UI.Forms
             _scheduleCard = new Panel
             {
                 Location = new Point(20, 160),
-                Size = new Size(360, 90),
-                BackColor = Color.FromArgb(250, 250, 250),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Size = new Size(380, 90),
+                BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
 
@@ -293,26 +285,12 @@ namespace AutoDaily.UI.Forms
             _recordButton.BackColor = Color.FromArgb(244, 67, 54);
             _recordButton.ForeColor = Color.White;
 
-            // 最小化主窗口，避免自己被录制
-            this.WindowState = FormWindowState.Minimized;
-
             _overlayForm = new OverlayForm();
             _overlayForm.PauseClicked += (s, e) => { /* 暂停功能暂不实现 */ };
             _overlayForm.StopClicked += (s, e) => StopRecording();
             _overlayForm.Show();
 
-            // 延时一下，确保主窗口最小化动画完成，且焦点回到目标窗口
-            System.Threading.Tasks.Task.Delay(500).ContinueWith(t => 
-            {
-                if (InvokeRequired)
-                {
-                    Invoke(new System.Action(() => _recorder.StartRecording()));
-                }
-                else
-                {
-                    _recorder.StartRecording();
-                }
-            });
+            _recorder.StartRecording();
         }
 
         private void StopRecording()
@@ -329,12 +307,6 @@ namespace AutoDaily.UI.Forms
 
             _recorder.StopRecording();
             LogService.LogUserAction("停止录制");
-            
-            // 恢复主窗口
-            this.Show();
-            this.WindowState = FormWindowState.Normal;
-            this.Activate();
-            
             UpdateRunButtonState();
         }
 
@@ -345,28 +317,16 @@ namespace AutoDaily.UI.Forms
                 Invoke(new System.Action(() =>
                 {
                     var task = _taskService.GetCurrentTask();
-                    task.Events = actions;
+                    task.Actions = actions;
                     task.TargetWindow = windowInfo;
-                    
-                    // Update Meta
-                    task.Meta.TotalEvents = actions.Count;
-                    task.Meta.Resolution = $"{Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}";
-                    task.Meta.CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds();
-                    
                     _taskService.UpdateCurrentTask(task);
                 }));
             }
             else
             {
                 var task = _taskService.GetCurrentTask();
-                task.Events = actions;
+                task.Actions = actions;
                 task.TargetWindow = windowInfo;
-
-                // Update Meta
-                task.Meta.TotalEvents = actions.Count;
-                task.Meta.Resolution = $"{Screen.PrimaryScreen.Bounds.Width}x{Screen.PrimaryScreen.Bounds.Height}";
-                task.Meta.CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds();
-
                 _taskService.UpdateCurrentTask(task);
             }
         }
