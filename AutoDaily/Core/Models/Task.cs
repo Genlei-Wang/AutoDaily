@@ -26,6 +26,8 @@ namespace AutoDaily.Core.Models
         public string Title { get; set; } = "";
         public string ProcessName { get; set; } = "";
         public WindowRect Rect { get; set; } = new WindowRect();
+        public int WindowLeft { get; set; } = 0;  // 录制时的窗口位置
+        public int WindowTop { get; set; } = 0;
     }
 
     public class WindowRect

@@ -97,8 +97,11 @@ namespace AutoDaily.Core.Engine
                     _targetWindow.Rect = new WindowRect();
                 }
                 
+                // 保存窗口的完整位置和大小信息
                 _targetWindow.Rect.Width = rect.Right - rect.Left;
                 _targetWindow.Rect.Height = rect.Bottom - rect.Top;
+                _targetWindow.WindowLeft = rect.Left;
+                _targetWindow.WindowTop = rect.Top;
 
                 // 获取窗口标题
                 int length = User32.GetWindowTextLength(hwnd);
@@ -141,10 +144,21 @@ namespace AutoDaily.Core.Engine
                 
                 if (hwnd != IntPtr.Zero)
                 {
-                    // 获取窗口的客户区矩形（更准确的坐标计算）
+                    // 获取窗口的矩形（包含标题栏和边框）
                     User32.GetWindowRect(hwnd, out var rect);
                     
-                    // 转换为相对坐标（相对于窗口客户区）
+                    // 确保使用录制开始时捕获的窗口
+                    // 如果当前窗口与目标窗口不同，使用目标窗口的位置
+                    if (_targetWindow != null && _targetWindow.WindowLeft != 0 && _targetWindow.WindowTop != 0)
+                    {
+                        // 使用保存的窗口位置，但使用当前窗口的大小（窗口可能被调整大小）
+                        rect.Left = _targetWindow.WindowLeft;
+                        rect.Top = _targetWindow.WindowTop;
+                        rect.Right = rect.Left + _targetWindow.Rect.Width;
+                        rect.Bottom = rect.Top + _targetWindow.Rect.Height;
+                    }
+                    
+                    // 转换为相对坐标（相对于窗口左上角）
                     int relX = point.X - rect.Left;
                     int relY = point.Y - rect.Top;
                     

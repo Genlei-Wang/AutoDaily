@@ -14,6 +14,7 @@ namespace AutoDaily.Core.Engine
     public class Player
     {
         private CancellationTokenSource _cancellationTokenSource;
+        private TaskModel _currentTask; // 保存当前任务，用于坐标计算
         public event Action<string> OnStatusUpdate;
         public event Action<int, int> OnProgressUpdate; // current, total
 
@@ -37,8 +38,12 @@ namespace AutoDaily.Core.Engine
             }
         }
 
+        private TaskModel _currentTask; // 保存当前任务，用于坐标计算
+        
         private void ExecuteTask(TaskModel task, CancellationToken token)
         {
+            _currentTask = task; // 保存当前任务引用
+            
             // 1. 查找目标窗口
             IntPtr hwnd = FindTargetWindow(task.TargetWindow);
             if (hwnd == IntPtr.Zero)
@@ -56,10 +61,10 @@ namespace AutoDaily.Core.Engine
                 return;
             }
 
-            // 2. 调整窗口大小和位置
+            // 2. 调整窗口大小和位置（恢复到录制时的状态）
             if (task.TargetWindow?.Rect != null)
             {
-                AdjustWindow(hwnd, task.TargetWindow.Rect);
+                AdjustWindow(hwnd, task.TargetWindow.Rect, task.TargetWindow);
             }
 
             // 3. 激活窗口
@@ -73,12 +78,33 @@ namespace AutoDaily.Core.Engine
             int currentHeight = windowRect.Bottom - windowRect.Top;
             LogService.Log($"目标窗口位置: Left={windowRect.Left}, Top={windowRect.Top}, Width={currentWidth}, Height={currentHeight}");
             
-            // 如果窗口大小与录制时不一致，记录警告
-            if (task.TargetWindow?.Rect != null)
+            // 如果窗口位置或大小与录制时不一致，记录警告并尝试修正
+            if (task.TargetWindow != null)
             {
-                if (currentWidth != task.TargetWindow.Rect.Width || currentHeight != task.TargetWindow.Rect.Height)
+                bool positionMismatch = (task.TargetWindow.WindowLeft != 0 && task.TargetWindow.WindowTop != 0) &&
+                    (windowRect.Left != task.TargetWindow.WindowLeft || windowRect.Top != task.TargetWindow.WindowTop);
+                
+                bool sizeMismatch = task.TargetWindow.Rect != null &&
+                    (currentWidth != task.TargetWindow.Rect.Width || currentHeight != task.TargetWindow.Rect.Height);
+                
+                if (positionMismatch || sizeMismatch)
                 {
-                    LogService.LogWarning($"窗口大小不匹配: 录制时({task.TargetWindow.Rect.Width}x{task.TargetWindow.Rect.Height}) vs 当前({currentWidth}x{currentHeight})");
+                    LogService.LogWarning($"窗口状态不匹配: 录制时位置({task.TargetWindow.WindowLeft},{task.TargetWindow.WindowTop}) 大小({task.TargetWindow.Rect?.Width}x{task.TargetWindow.Rect?.Height}) vs 当前位置({windowRect.Left},{windowRect.Top}) 大小({currentWidth}x{currentHeight})");
+                    
+                    // 尝试恢复到录制时的位置和大小
+                    if (task.TargetWindow.WindowLeft != 0 && task.TargetWindow.WindowTop != 0 && task.TargetWindow.Rect != null)
+                    {
+                        User32.SetWindowPos(
+                            hwnd,
+                            User32.HWND_TOP,
+                            task.TargetWindow.WindowLeft,
+                            task.TargetWindow.WindowTop,
+                            task.TargetWindow.Rect.Width,
+                            task.TargetWindow.Rect.Height,
+                            User32.SWP_SHOWWINDOW);
+                        Thread.Sleep(200);
+                        LogService.Log($"已尝试恢复窗口到录制时的位置和大小");
+                    }
                 }
             }
 
@@ -156,26 +182,36 @@ namespace AutoDaily.Core.Engine
             return IntPtr.Zero;
         }
 
-        private void AdjustWindow(IntPtr hwnd, WindowRect rect)
+        private void AdjustWindow(IntPtr hwnd, WindowRect rect, WindowInfo windowInfo)
         {
             User32.GetWindowRect(hwnd, out var currentRect);
             
-            // 如果窗口大小不匹配，调整大小
             int currentWidth = currentRect.Right - currentRect.Left;
             int currentHeight = currentRect.Bottom - currentRect.Top;
+            
+            // 确定目标位置：优先使用录制时的位置，否则保持当前位置
+            int targetLeft = (windowInfo != null && windowInfo.WindowLeft != 0) 
+                ? windowInfo.WindowLeft 
+                : currentRect.Left;
+            int targetTop = (windowInfo != null && windowInfo.WindowTop != 0) 
+                ? windowInfo.WindowTop 
+                : currentRect.Top;
 
-            if (currentWidth != rect.Width || currentHeight != rect.Height)
+            // 如果窗口大小或位置不匹配，调整
+            if (currentWidth != rect.Width || currentHeight != rect.Height || 
+                currentRect.Left != targetLeft || currentRect.Top != targetTop)
             {
                 User32.SetWindowPos(
                     hwnd,
                     User32.HWND_TOP,
-                    currentRect.Left,
-                    currentRect.Top,
+                    targetLeft,
+                    targetTop,
                     rect.Width,
                     rect.Height,
                     User32.SWP_SHOWWINDOW);
                 
-                Thread.Sleep(200); // 等待窗口调整完成
+                Thread.Sleep(300); // 等待窗口调整完成
+                LogService.Log($"窗口已调整: 位置({targetLeft},{targetTop}) 大小({rect.Width}x{rect.Height})");
             }
         }
 
@@ -213,10 +249,35 @@ namespace AutoDaily.Core.Engine
             int screenX, screenY;
             if (action.Relative)
             {
+                // 关键修复：优先使用录制时保存的窗口位置
+                // 这样可以确保坐标一致性，即使窗口被移动了
+                int windowLeft = rect.Left;
+                int windowTop = rect.Top;
+                
+                // 如果任务中保存了录制时的窗口位置，且窗口大小匹配，使用保存的位置
+                if (_currentTask?.TargetWindow != null && 
+                    _currentTask.TargetWindow.WindowLeft != 0 && 
+                    _currentTask.TargetWindow.WindowTop != 0)
+                {
+                    int currentWidth = rect.Right - rect.Left;
+                    int currentHeight = rect.Bottom - rect.Top;
+                    
+                    // 验证窗口大小是否匹配（确保是同一个窗口）
+                    if (_currentTask.TargetWindow.Rect != null &&
+                        Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
+                        Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
+                    {
+                        // 使用录制时的窗口位置，确保坐标一致性
+                        windowLeft = _currentTask.TargetWindow.WindowLeft;
+                        windowTop = _currentTask.TargetWindow.WindowTop;
+                        LogService.Log($"使用录制时的窗口位置: ({windowLeft},{windowTop})");
+                    }
+                }
+                
                 // 使用窗口左上角 + 相对坐标 = 屏幕坐标
-                screenX = rect.Left + action.X;
-                screenY = rect.Top + action.Y;
-                LogService.Log($"相对坐标转换: 窗口({rect.Left},{rect.Top}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
+                screenX = windowLeft + action.X;
+                screenY = windowTop + action.Y;
+                LogService.Log($"相对坐标转换: 窗口({windowLeft},{windowTop}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
                 
                 // 验证坐标是否在窗口范围内（防止坐标错误）
                 int windowWidth = rect.Right - rect.Left;

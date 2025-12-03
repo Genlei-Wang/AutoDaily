@@ -52,10 +52,15 @@ namespace AutoDaily.UI.Forms
         private void InitializeComponent()
         {
             Text = "AutoDaily 日报助手";
-            // 设置DPI感知模式，确保窗口大小正确缩放
-            AutoScaleMode = AutoScaleMode.Dpi;
-            // 基础尺寸400x600，会根据DPI自动缩放
+            
+            // 使用Font模式进行DPI缩放，这是WinForms推荐的方式
+            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
+            
+            // 基础尺寸400x600（在96 DPI下）
+            // WinForms会根据系统DPI自动缩放
             Size = new Size(400, 600);
+            MinimumSize = new Size(400, 600);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = true;
@@ -362,6 +367,16 @@ namespace AutoDaily.UI.Forms
 
             LogService.LogUserAction("开始运行任务");
 
+            // 确保窗口大小正确（防止窗口被压缩）
+            if (WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+            if (Size.Width < 400 || Size.Height < 600)
+            {
+                Size = new Size(400, 600);
+            }
+
             _runningOverlay = new RunningOverlayForm();
             _runningOverlay.Show();
 
@@ -389,6 +404,16 @@ namespace AutoDaily.UI.Forms
                 _statusIndicator.ForeColor = Color.FromArgb(76, 175, 80);
                 _runButton.Enabled = true;
                 _recordButton.Enabled = true;
+                
+                // 确保窗口恢复正常显示
+                if (WindowState == FormWindowState.Minimized)
+                {
+                    WindowState = FormWindowState.Normal;
+                }
+                if (Size.Width < 400 || Size.Height < 600)
+                {
+                    Size = new Size(400, 600);
+                }
             }
         }
 
