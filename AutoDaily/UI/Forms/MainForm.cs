@@ -53,12 +53,12 @@ namespace AutoDaily.UI.Forms
         {
             Text = "AutoDaily 日报助手";
             
-            // 使用Font模式进行DPI缩放，这是WinForms推荐的方式
-            AutoScaleMode = AutoScaleMode.Font;
+            // 使用DPI模式进行缩放，确保在高DPI显示器上正确显示
+            AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F); // 基准DPI 96 (100%)
             
             // 基础尺寸400x600（在96 DPI下）
-            // WinForms会根据系统DPI自动缩放
+            // WinForms的AutoScaleMode.Dpi会自动根据系统DPI缩放窗口和控件
             Size = new Size(400, 600);
             MinimumSize = new Size(400, 600);
             FormBorderStyle = FormBorderStyle.FixedSingle;

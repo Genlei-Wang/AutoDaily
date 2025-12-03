@@ -38,8 +38,6 @@ namespace AutoDaily.Core.Engine
             }
         }
 
-        private TaskModel _currentTask; // 保存当前任务，用于坐标计算
-        
         private void ExecuteTask(TaskModel task, CancellationToken token)
         {
             _currentTask = task; // 保存当前任务引用

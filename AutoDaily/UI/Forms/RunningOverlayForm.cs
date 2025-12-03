@@ -23,7 +23,12 @@ namespace AutoDaily.UI.Forms
         private void InitializeComponent()
         {
             FormBorderStyle = FormBorderStyle.None;
-            // 改为小窗口，不遮挡屏幕
+            
+            // DPI缩放支持
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            
+            // 基础尺寸350x180（在96 DPI下），WinForms会自动根据DPI缩放
             Size = new Size(350, 180);
             TopMost = true;
             ShowInTaskbar = false;

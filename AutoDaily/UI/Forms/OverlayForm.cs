@@ -30,6 +30,12 @@ namespace AutoDaily.UI.Forms
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(50, 50, 50); // 不透明背景
             TransparencyKey = Color.FromArgb(1, 1, 1); // 使用透明度键实现半透明效果
+            
+            // DPI缩放支持
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            
+            // 基础尺寸400x60（在96 DPI下），WinForms会自动根据DPI缩放
             Size = new Size(400, 60);
             Location = new Point(
                 (Screen.PrimaryScreen.WorkingArea.Width - Width) / 2,
