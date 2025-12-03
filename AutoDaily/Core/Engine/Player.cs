@@ -232,6 +232,14 @@ namespace AutoDaily.Core.Engine
                 case "Input":
                     PerformInput(action.Text);
                     break;
+
+                case "MouseWheel":
+                    PerformMouseWheel(action, hwnd);
+                    break;
+
+                case "KeyPress":
+                    PerformKeyPress(action);
+                    break;
             }
         }
 
@@ -433,6 +441,117 @@ namespace AutoDaily.Core.Engine
                 LogService.LogError($"输入模拟失败: {text}", ex);
                 OnStatusUpdate?.Invoke($"输入出错: {ex.Message}");
             }
+        }
+
+        private void PerformMouseWheel(ActionModel action, IntPtr hwnd)
+        {
+            // 先移动鼠标到目标位置
+            if (!User32.GetWindowRect(hwnd, out var rect))
+                return;
+
+            int screenX, screenY;
+            if (action.Relative)
+            {
+                screenX = rect.Left + action.X;
+                screenY = rect.Top + action.Y;
+            }
+            else
+            {
+                screenX = action.X;
+                screenY = action.Y;
+            }
+
+            User32.SetCursorPos(screenX, screenY);
+            Thread.Sleep(50);
+
+            // 执行滚轮操作
+            var inputs = new User32.INPUT[1];
+            inputs[0] = new User32.INPUT
+            {
+                type = User32.INPUT_MOUSE,
+                U = new User32.InputUnion
+                {
+                    mi = new User32.MOUSEINPUT
+                    {
+                        dx = 0,
+                        dy = 0,
+                        mouseData = (uint)action.Param,
+                        dwFlags = User32.MOUSEEVENTF_WHEEL,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+            User32.SendInput(1, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
+            Thread.Sleep(50);
+        }
+
+        private void PerformKeyPress(ActionModel action)
+        {
+            int vkCode = action.Param;
+            
+            // 处理修饰键组合
+            bool ctrl = action.Text?.Contains("Ctrl+") == true;
+            bool shift = action.Text?.Contains("Shift+") == true;
+            bool alt = action.Text?.Contains("Alt+") == true;
+
+            var inputs = new List<User32.INPUT>();
+
+            // 按下修饰键
+            if (ctrl)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_CONTROL, false));
+            }
+            if (shift)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_SHIFT, false));
+            }
+            if (alt)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_ALT, false));
+            }
+
+            // 按下主键
+            inputs.Add(CreateKeyInput(vkCode, false));
+
+            // 释放主键
+            inputs.Add(CreateKeyInput(vkCode, true));
+
+            // 释放修饰键（逆序）
+            if (alt)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_ALT, true));
+            }
+            if (shift)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_SHIFT, true));
+            }
+            if (ctrl)
+            {
+                inputs.Add(CreateKeyInput(User32.VK_CONTROL, true));
+            }
+
+            User32.SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf(typeof(User32.INPUT)));
+            Thread.Sleep(50);
+        }
+
+        private User32.INPUT CreateKeyInput(int vkCode, bool keyUp)
+        {
+            return new User32.INPUT
+            {
+                type = User32.INPUT_KEYBOARD,
+                U = new User32.InputUnion
+                {
+                    ki = new User32.KEYBDINPUT
+                    {
+                        wVk = (ushort)vkCode,
+                        wScan = 0,
+                        dwFlags = keyUp ? User32.KEYEVENTF_KEYUP : 0,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
         }
 
         public void Stop()

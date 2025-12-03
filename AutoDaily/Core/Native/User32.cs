@@ -90,6 +90,7 @@ namespace AutoDaily.Core.Native
         public const int WM_LBUTTONUP = 0x0202;
         public const int WM_RBUTTONDOWN = 0x0204;
         public const int WM_RBUTTONUP = 0x0205;
+        public const int WM_MOUSEWHEEL = 0x020A;
         public const int WM_KEYDOWN = 0x0100;
         public const int WM_KEYUP = 0x0101;
         public const int WM_SYSKEYDOWN = 0x0104;
@@ -167,8 +168,19 @@ namespace AutoDaily.Core.Native
         public const uint MOUSEEVENTF_LEFTUP = 0x0004;
         public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
         public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+        public const uint MOUSEEVENTF_WHEEL = 0x0800;
         public const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
         public const uint KEYEVENTF_KEYUP = 0x0002;
+        
+        // 常用虚拟键码
+        public const int VK_CONTROL = 0x11;
+        public const int VK_SHIFT = 0x10;
+        public const int VK_ALT = 0x12;
+        public const int VK_TAB = 0x09;
+        public const int VK_ENTER = 0x0D;
+        public const int VK_ESCAPE = 0x1B;
+        public const int VK_BACK = 0x08;
+        public const int VK_DELETE = 0x2E;
     }
 }
 

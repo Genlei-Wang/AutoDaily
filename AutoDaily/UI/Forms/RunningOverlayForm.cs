@@ -28,8 +28,8 @@ namespace AutoDaily.UI.Forms
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F);
             
-            // 基础尺寸350x180（在96 DPI下），WinForms会自动根据DPI缩放
-            Size = new Size(350, 180);
+            // 缩小窗口，避免遮挡（基础尺寸280x120）
+            Size = new Size(280, 120);
             TopMost = true;
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(240, 240, 240);
@@ -58,14 +58,14 @@ namespace AutoDaily.UI.Forms
             // HUD面板（小窗口）
             var panel = new Panel
             {
-                Size = new Size(Width - 10, Height - 40),
-                Location = new Point(5, 35),
+                Size = new Size(Width - 10, Height - 30),
+                Location = new Point(5, 25),
                 BackColor = Color.White
             };
 
             // 圆角
             var path = new GraphicsPath();
-            int radius = 15;
+            int radius = 10;
             path.AddArc(0, 0, radius * 2, radius * 2, 180, 90);
             path.AddArc(panel.Width - radius * 2, 0, radius * 2, radius * 2, 270, 90);
             path.AddArc(panel.Width - radius * 2, panel.Height - radius * 2, radius * 2, radius * 2, 0, 90);
@@ -75,48 +75,48 @@ namespace AutoDaily.UI.Forms
 
             _titleLabel = new Label
             {
-                Text = "🤖 正在运行",
-                Font = new Font("Microsoft YaHei", 12, FontStyle.Bold),
+                Text = "🤖 运行中",
+                Font = new Font("Microsoft YaHei", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
-                Location = new Point(10, 10),
-                Size = new Size(panel.Width - 20, 25),
+                Location = new Point(10, 8),
+                Size = new Size(panel.Width - 20, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _statusLabel = new Label
             {
                 Text = "准备中...",
-                Font = new Font("Microsoft YaHei", 9),
+                Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(60, 60, 60),
-                Location = new Point(10, 40),
-                Size = new Size(panel.Width - 20, 20),
+                Location = new Point(10, 30),
+                Size = new Size(panel.Width - 20, 18),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _progressBar = new ProgressBar
             {
-                Location = new Point(10, 65),
-                Size = new Size(panel.Width - 20, 20),
+                Location = new Point(10, 50),
+                Size = new Size(panel.Width - 20, 15),
                 Style = ProgressBarStyle.Continuous
             };
 
             _warningLabel = new Label
             {
                 Text = "按 F10 停止",
-                Font = new Font("Microsoft YaHei", 8),
+                Font = new Font("Microsoft YaHei", 7),
                 ForeColor = Color.FromArgb(255, 152, 0),
-                Location = new Point(10, 90),
-                Size = new Size(panel.Width - 20, 20),
+                Location = new Point(10, 68),
+                Size = new Size(panel.Width - 20, 15),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             _stopHintLabel = new Label
             {
-                Text = "或点击右上角 × 关闭",
-                Font = new Font("Microsoft YaHei", 7),
+                Text = "或点击 × 关闭",
+                Font = new Font("Microsoft YaHei", 6),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(10, 110),
-                Size = new Size(panel.Width - 20, 15),
+                Location = new Point(10, 85),
+                Size = new Size(panel.Width - 20, 12),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 

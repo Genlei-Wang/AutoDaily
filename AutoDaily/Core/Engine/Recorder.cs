@@ -129,14 +129,10 @@ namespace AutoDaily.Core.Engine
             {
                 var timeSinceLastAction = (DateTime.Now - _lastActionTime).TotalMilliseconds;
 
-                if (timeSinceLastAction < DEBOUNCE_MS)
-                    return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
-
-                // 获取鼠标点击时的窗口（使用WindowFromPoint更准确）
+                // 获取鼠标位置
                 User32.GetCursorPos(out var point);
                 var hwnd = User32.WindowFromPoint(point);
                 
-                // 如果WindowFromPoint返回0，则使用前台窗口
                 if (hwnd == IntPtr.Zero)
                 {
                     hwnd = User32.GetForegroundWindow();
@@ -144,26 +140,37 @@ namespace AutoDaily.Core.Engine
                 
                 if (hwnd != IntPtr.Zero)
                 {
-                    // 获取窗口的矩形（包含标题栏和边框）
                     User32.GetWindowRect(hwnd, out var rect);
                     
-                    // 确保使用录制开始时捕获的窗口
-                    // 如果当前窗口与目标窗口不同，使用目标窗口的位置
+                    // 使用目标窗口的位置
                     if (_targetWindow != null && _targetWindow.WindowLeft != 0 && _targetWindow.WindowTop != 0)
                     {
-                        // 使用保存的窗口位置，但使用当前窗口的大小（窗口可能被调整大小）
                         rect.Left = _targetWindow.WindowLeft;
                         rect.Top = _targetWindow.WindowTop;
                         rect.Right = rect.Left + _targetWindow.Rect.Width;
                         rect.Bottom = rect.Top + _targetWindow.Rect.Height;
                     }
                     
-                    // 转换为相对坐标（相对于窗口左上角）
                     int relX = point.X - rect.Left;
                     int relY = point.Y - rect.Top;
-                    
-                    // 记录日志以便调试
-                    System.Diagnostics.Debug.WriteLine($"录制点击: 屏幕({point.X},{point.Y}) 窗口({rect.Left},{rect.Top}) 相对({relX},{relY})");
+
+                    // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
+                    if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
+                    {
+                        AddAction(new ActionModel
+                        {
+                            Type = "MouseMove",
+                            X = relX,
+                            Y = relY,
+                            Relative = true
+                        });
+                        _lastActionTime = DateTime.Now;
+                        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+                    }
+
+                    // 处理鼠标点击
+                    if (timeSinceLastAction < DEBOUNCE_MS)
+                        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
 
                     if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
                     {
@@ -189,6 +196,25 @@ namespace AutoDaily.Core.Engine
                         });
                         _lastActionTime = DateTime.Now;
                     }
+                    // 处理鼠标滚轮
+                    else if (wParam == (IntPtr)User32.WM_MOUSEWHEEL)
+                    {
+                        // 在低级鼠标钩子中，lParam指向MSLLHOOKSTRUCT
+                        // 结构：POINT pt(8字节) + DWORD mouseData(4字节) + DWORD flags(4字节) + DWORD time(4字节) + ULONG_PTR dwExtraInfo(8字节)
+                        // mouseData的高16位是wheel delta
+                        int mouseData = Marshal.ReadInt32(lParam, 8); // 偏移8字节（跳过POINT）获取mouseData
+                        int delta = (short)((mouseData >> 16) & 0xFFFF); // 高16位是wheel delta（有符号）
+                        
+                        AddAction(new ActionModel
+                        {
+                            Type = "MouseWheel",
+                            X = relX,
+                            Y = relY,
+                            Relative = true,
+                            Param = delta
+                        });
+                        _lastActionTime = DateTime.Now;
+                    }
                 }
             }
 
@@ -199,17 +225,61 @@ namespace AutoDaily.Core.Engine
         {
             if (nCode >= 0 && _isRecording)
             {
-                // 只记录按键按下，忽略按键释放
+                // 只记录按键按下
                 if (wParam == (IntPtr)User32.WM_KEYDOWN || wParam == (IntPtr)User32.WM_SYSKEYDOWN)
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
                     
-                    // 忽略功能键（F1-F12等）
+                    // 检查修饰键状态
+                    bool ctrl = (User32.GetAsyncKeyState(User32.VK_CONTROL) & 0x8000) != 0;
+                    bool shift = (User32.GetAsyncKeyState(User32.VK_SHIFT) & 0x8000) != 0;
+                    bool alt = (User32.GetAsyncKeyState(User32.VK_ALT) & 0x8000) != 0;
+                    
+                    // 记录快捷键组合（Ctrl+C, Ctrl+V等）
+                    if (ctrl || shift || alt)
+                    {
+                        AddAction(new ActionModel
+                        {
+                            Type = "KeyPress",
+                            Param = vkCode,
+                            Text = $"{(ctrl ? "Ctrl+" : "")}{(shift ? "Shift+" : "")}{(alt ? "Alt+" : "")}"
+                        });
+                        _lastActionTime = DateTime.Now;
+                        return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                    }
+                    
+                    // 忽略功能键（F1-F12等），但可以记录其他特殊键
                     if (vkCode >= 0x70 && vkCode <= 0x7B)
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
 
-                    // 这里简化处理：只记录可见字符输入
-                    // 实际应该记录完整的按键序列，但为了简化，我们主要依赖鼠标点击
+                    // 记录特殊键（Enter, Tab, Escape等）
+                    if (vkCode == User32.VK_ENTER || vkCode == User32.VK_TAB || 
+                        vkCode == User32.VK_ESCAPE || vkCode == User32.VK_BACK || 
+                        vkCode == User32.VK_DELETE)
+                    {
+                        AddAction(new ActionModel
+                        {
+                            Type = "KeyPress",
+                            Param = vkCode
+                        });
+                        _lastActionTime = DateTime.Now;
+                        return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                    }
+
+                    // 记录可见字符（通过SendKeys转换）
+                    try
+                    {
+                        // 获取当前按键对应的字符
+                        var key = (Keys)vkCode;
+                        if (key >= Keys.A && key <= Keys.Z || 
+                            key >= Keys.D0 && key <= Keys.D9 ||
+                            key >= Keys.NumPad0 && key <= Keys.NumPad9)
+                        {
+                            // 这些键会被Input类型处理，这里不单独记录
+                            // 实际输入会通过SendKeys捕获
+                        }
+                    }
+                    catch { }
                 }
             }
 

@@ -147,34 +147,15 @@ namespace AutoDaily.UI.Forms
             _scheduleCard = new Panel
             {
                 Location = new Point(20, 180),
-                Size = new Size(360, 100),
+                Size = new Size(360, 60), // 默认较小，开启后动态调整
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
 
-            var scheduleLabel = new Label
-            {
-                Text = "每天",
-                Font = new Font("Microsoft YaHei", 10),
-                ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(20, 15),
-                AutoSize = true
-            };
-
-            _timePicker = new DateTimePicker
-            {
-                Format = DateTimePickerFormat.Time,
-                ShowUpDown = true,
-                Size = new Size(80, 25),
-                Location = new Point(60, 12),
-                Font = new Font("Microsoft YaHei", 9)
-            };
-            _timePicker.Value = DateTime.Today.AddHours(9);
-            _timePicker.ValueChanged += TimePicker_ValueChanged;
-
+            // 开关和标签（始终显示）
             _scheduleToggle = new ToggleSwitch
             {
-                Location = new Point(160, 10),
+                Location = new Point(20, 15),
                 Checked = false
             };
             _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged;
@@ -184,23 +165,50 @@ namespace AutoDaily.UI.Forms
                 Text = "自动运行",
                 Font = new Font("Microsoft YaHei", 9),
                 ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(220, 15),
+                Location = new Point(80, 18),
                 AutoSize = true
             };
+
+            // 时间配置（默认隐藏，开启后显示）
+            var scheduleLabel = new Label
+            {
+                Name = "ScheduleTimeConfig",
+                Text = "每天",
+                Font = new Font("Microsoft YaHei", 10),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Location = new Point(20, 50),
+                AutoSize = true,
+                Visible = false
+            };
+
+            _timePicker = new DateTimePicker
+            {
+                Name = "ScheduleTimeConfig",
+                Format = DateTimePickerFormat.Time,
+                ShowUpDown = true,
+                Size = new Size(80, 25),
+                Location = new Point(60, 47),
+                Font = new Font("Microsoft YaHei", 9),
+                Visible = false
+            };
+            _timePicker.Value = DateTime.Today.AddHours(9);
+            _timePicker.ValueChanged += TimePicker_ValueChanged;
 
             _nextRunLabel = new Label
             {
+                Name = "ScheduleTimeConfig",
                 Text = "*下次运行：明天 09:00",
                 Font = new Font("Microsoft YaHei", 8),
                 ForeColor = Color.FromArgb(150, 150, 150),
-                Location = new Point(20, 45),
-                AutoSize = true
+                Location = new Point(20, 80),
+                AutoSize = true,
+                Visible = false
             };
 
-            _scheduleCard.Controls.Add(scheduleLabel);
-            _scheduleCard.Controls.Add(_timePicker);
             _scheduleCard.Controls.Add(_scheduleToggle);
             _scheduleCard.Controls.Add(_scheduleTimeLabel);
+            _scheduleCard.Controls.Add(scheduleLabel);
+            _scheduleCard.Controls.Add(_timePicker);
             _scheduleCard.Controls.Add(_nextRunLabel);
 
             Controls.Add(_statusIndicator);
@@ -228,6 +236,26 @@ namespace AutoDaily.UI.Forms
             // 更新UI
             _scheduleToggle.Checked = task.Schedule.Enabled;
             _timePicker.Value = DateTime.Today.AddHours(task.Schedule.Hour).AddMinutes(task.Schedule.Minute);
+            
+            // 根据开关状态显示/隐藏配置项
+            bool isEnabled = task.Schedule.Enabled;
+            foreach (Control ctrl in _scheduleCard.Controls)
+            {
+                if (ctrl.Name == "ScheduleTimeConfig")
+                {
+                    ctrl.Visible = isEnabled;
+                }
+            }
+            
+            // 调整卡片大小
+            if (isEnabled)
+            {
+                _scheduleCard.Size = new Size(360, 110);
+            }
+            else
+            {
+                _scheduleCard.Size = new Size(360, 50);
+            }
             
             UpdateRunButtonState();
             UpdateNextRunTime();
@@ -367,15 +395,8 @@ namespace AutoDaily.UI.Forms
 
             LogService.LogUserAction("开始运行任务");
 
-            // 确保窗口大小正确（防止窗口被压缩）
-            if (WindowState == FormWindowState.Minimized)
-            {
-                WindowState = FormWindowState.Normal;
-            }
-            if (Size.Width < 400 || Size.Height < 600)
-            {
-                Size = new Size(400, 600);
-            }
+            // 运行时最小化主窗口，避免遮挡
+            this.WindowState = FormWindowState.Minimized;
 
             _runningOverlay = new RunningOverlayForm();
             _runningOverlay.Show();
@@ -405,15 +426,10 @@ namespace AutoDaily.UI.Forms
                 _runButton.Enabled = true;
                 _recordButton.Enabled = true;
                 
-                // 确保窗口恢复正常显示
-                if (WindowState == FormWindowState.Minimized)
-                {
-                    WindowState = FormWindowState.Normal;
-                }
-                if (Size.Width < 400 || Size.Height < 600)
-                {
-                    Size = new Size(400, 600);
-                }
+                // 恢复主窗口显示
+                this.WindowState = FormWindowState.Normal;
+                this.Show();
+                this.Activate();
             }
         }
 
@@ -444,12 +460,28 @@ namespace AutoDaily.UI.Forms
             var task = _taskService.GetCurrentTask();
             task.Schedule.Enabled = _scheduleToggle.Checked;
             _taskService.UpdateCurrentTask(task);
-            UpdateNextRunTime();
-
-            if (_scheduleToggle.Checked)
+            
+            // 根据开关状态显示/隐藏配置项
+            bool isEnabled = _scheduleToggle.Checked;
+            foreach (Control ctrl in _scheduleCard.Controls)
             {
-                _nextRunLabel.Text = "已激活。哪怕电脑关机，只要您上班解锁屏幕，我就能帮您跑。";
+                if (ctrl.Name == "ScheduleTimeConfig")
+                {
+                    ctrl.Visible = isEnabled;
+                }
             }
+            
+            // 调整卡片大小
+            if (isEnabled)
+            {
+                _scheduleCard.Size = new Size(360, 110);
+            }
+            else
+            {
+                _scheduleCard.Size = new Size(360, 50);
+            }
+            
+            UpdateNextRunTime();
         }
 
         private void TimePicker_ValueChanged(object sender, EventArgs e)
