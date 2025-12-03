@@ -147,7 +147,7 @@ namespace AutoDaily.UI.Forms
             _scheduleCard = new Panel
             {
                 Location = new Point(20, 180),
-                Size = new Size(360, 60), // 默认较小，开启后动态调整
+                Size = new Size(360, 50), // 默认关闭状态50px，开启后动态调整为110px
                 BackColor = Color.FromArgb(250, 250, 250)
             };
             DrawRoundedPanel(_scheduleCard, 8);
@@ -471,7 +471,7 @@ namespace AutoDaily.UI.Forms
                 }
             }
             
-            // 调整卡片大小
+            // 调整卡片大小（根据文档：关闭状态50px，开启状态110px）
             if (isEnabled)
             {
                 _scheduleCard.Size = new Size(360, 110);

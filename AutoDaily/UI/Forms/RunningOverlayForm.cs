@@ -75,9 +75,9 @@ namespace AutoDaily.UI.Forms
 
             _titleLabel = new Label
             {
-                Text = "🤖 运行中",
+                Text = "🤖 正在运行", // 根据文档要求
                 Font = new Font("Microsoft YaHei", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.FromArgb(0, 122, 204), // 蓝色 RGB: 0,122,204
                 Location = new Point(10, 8),
                 Size = new Size(panel.Width - 20, 20),
                 TextAlign = ContentAlignment.MiddleCenter
@@ -87,7 +87,7 @@ namespace AutoDaily.UI.Forms
             {
                 Text = "准备中...",
                 Font = new Font("Microsoft YaHei", 8),
-                ForeColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.FromArgb(60, 60, 60), // 灰色 RGB: 60,60,60
                 Location = new Point(10, 30),
                 Size = new Size(panel.Width - 20, 18),
                 TextAlign = ContentAlignment.MiddleCenter
@@ -96,9 +96,11 @@ namespace AutoDaily.UI.Forms
             _progressBar = new ProgressBar
             {
                 Location = new Point(10, 50),
-                Size = new Size(panel.Width - 20, 15),
+                Size = new Size(panel.Width - 20, 15), // 15px高，符合文档要求
                 Style = ProgressBarStyle.Continuous
             };
+            // 进度条颜色将在Paint事件中设置为绿色 RGB: 76,175,80
+            _progressBar.Paint += ProgressBar_Paint;
 
             _warningLabel = new Label
             {
@@ -134,18 +136,21 @@ namespace AutoDaily.UI.Forms
             _currentStep = current;
             _totalSteps = total;
             
+            // 根据文档要求：执行步骤 X/Y: 动作类型
+            string statusText = $"执行步骤 {current}/{total}: {status}";
+            
             if (InvokeRequired)
             {
                 Invoke(new System.Action(() =>
                 {
-                    _statusLabel.Text = $"步骤: {status} ({current}/{total})";
+                    _statusLabel.Text = statusText;
                     _progressBar.Maximum = total;
                     _progressBar.Value = current;
                 }));
             }
             else
             {
-                _statusLabel.Text = $"步骤: {status} ({current}/{total})";
+                _statusLabel.Text = statusText;
                 _progressBar.Maximum = total;
                 _progressBar.Value = current;
             }
@@ -160,6 +165,28 @@ namespace AutoDaily.UI.Forms
             else
             {
                 _statusLabel.Text = status;
+            }
+        }
+
+        private void ProgressBar_Paint(object sender, PaintEventArgs e)
+        {
+            // 自定义绘制进度条为绿色 RGB: 76,175,80
+            var progressBar = sender as ProgressBar;
+            if (progressBar == null) return;
+
+            var rect = progressBar.ClientRectangle;
+            var progress = progressBar.Maximum > 0 
+                ? (int)(rect.Width * (double)progressBar.Value / progressBar.Maximum) 
+                : 0;
+
+            // 绘制背景
+            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(240, 240, 240)), rect);
+
+            // 绘制进度（绿色 RGB: 76,175,80）
+            if (progress > 0)
+            {
+                var progressRect = new Rectangle(rect.X, rect.Y, progress, rect.Height);
+                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(76, 175, 80)), progressRect);
             }
         }
     }

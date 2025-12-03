@@ -28,18 +28,18 @@ namespace AutoDaily.UI.Forms
             StartPosition = FormStartPosition.Manual;
             TopMost = true;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(50, 50, 50); // 不透明背景
-            TransparencyKey = Color.FromArgb(1, 1, 1); // 使用透明度键实现半透明效果
+            BackColor = Color.FromArgb(50, 50, 50); // 深灰色背景
+            Opacity = 0.85; // 透明度85%
             
             // DPI缩放支持
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F);
             
-            // 基础尺寸400x60（在96 DPI下），WinForms会自动根据DPI缩放
-            Size = new Size(400, 60);
+            // 基础尺寸350x45（在96 DPI下），优化为更小尺寸减少遮挡
+            Size = new Size(350, 45);
             Location = new Point(
                 (Screen.PrimaryScreen.WorkingArea.Width - Width) / 2,
-                20);
+                10); // 距离顶部10px
 
             // 圆角窗口
             Region = System.Drawing.Region.FromHrgn(
@@ -53,7 +53,7 @@ namespace AutoDaily.UI.Forms
                 Text = "🔴 录制中",
                 ForeColor = Color.White,
                 Font = new Font("Microsoft YaHei", 10, FontStyle.Bold),
-                Location = new Point(15, 15),
+                Location = new Point(15, 12),
                 AutoSize = true
             };
 
@@ -62,18 +62,18 @@ namespace AutoDaily.UI.Forms
                 Text = "00:00",
                 ForeColor = Color.White,
                 Font = new Font("Microsoft YaHei", 9),
-                Location = new Point(120, 18),
+                Location = new Point(100, 15),
                 AutoSize = true
             };
 
             _pauseButton = new Button
             {
                 Text = "⏸ 暂停",
-                Size = new Size(70, 30),
-                Location = new Point(200, 15),
+                Size = new Size(70, 30), // 符合文档要求
+                Location = new Point(160, 10),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(50, 50, 50), // 不透明背景
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
             _pauseButton.FlatAppearance.BorderSize = 0;
@@ -82,11 +82,11 @@ namespace AutoDaily.UI.Forms
             _stopButton = new Button
             {
                 Text = "⏹ 完成并保存",
-                Size = new Size(100, 30),
-                Location = new Point(280, 15),
+                Size = new Size(100, 30), // 符合文档要求
+                Location = new Point(240, 10),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(50, 50, 50), // 不透明背景
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
             _stopButton.FlatAppearance.BorderSize = 0;
