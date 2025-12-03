@@ -99,6 +99,8 @@ namespace AutoDaily.Core.Native
         [DllImport("user32.dll")]
         public static extern bool SetProcessDPIAware();
 
+        [DllImport("user32.dll")]
+        public static extern int GetSystemMetrics(int nIndex);
 
         public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
