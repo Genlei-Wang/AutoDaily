@@ -308,13 +308,14 @@ namespace AutoDaily.UI.Forms
             }
             
             // 调整卡片大小：关闭状态显示开关行，开启状态显示完整配置（包含提示信息）
+            int cardWidth = 340; // 与录制组件同宽
             if (isEnabled)
             {
-                _scheduleCard.Size = new Size(360, 130); // 容纳时间配置和提示信息
+                _scheduleCard.Size = new Size(cardWidth, 130); // 容纳时间配置和提示信息
             }
             else
             {
-                _scheduleCard.Size = new Size(360, 50); // 仅显示开关
+                _scheduleCard.Size = new Size(cardWidth, 50); // 仅显示开关
             }
             
             // 重新绘制圆角区域，确保内容不被裁剪

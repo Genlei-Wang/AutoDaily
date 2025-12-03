@@ -111,7 +111,7 @@ namespace AutoDaily.UI.Forms
             _warningLabel = new Label
             {
                 Text = "按 F10 停止",
-                Font = new Font("Microsoft YaHei", 8, FontStyle.Regular), // 增大字号
+                Font = new Font("Microsoft YaHei", FONT_SIZE_WARNING, FontStyle.Regular),
                 ForeColor = Color.FromArgb(255, 152, 0),
                 Location = new Point(10, 68),
                 Size = new Size(panel.Width - 20, 15),
@@ -121,7 +121,7 @@ namespace AutoDaily.UI.Forms
             _stopHintLabel = new Label
             {
                 Text = "或点击 × 关闭",
-                Font = new Font("Microsoft YaHei", 7, FontStyle.Regular), // 增大字号
+                Font = new Font("Microsoft YaHei", FONT_SIZE_HINT, FontStyle.Regular),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Location = new Point(10, 85),
                 Size = new Size(panel.Width - 20, 12),
