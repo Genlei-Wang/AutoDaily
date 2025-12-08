@@ -246,103 +246,27 @@ namespace AutoDaily.Core.Engine
 
         /// <summary>
         /// 执行鼠标点击操作
-        /// 关键：必须使用录制时保存的窗口位置计算坐标，而不是实时获取的窗口位置
+        /// 使用绝对坐标，直接定位（参考TinyTask方式）
         /// </summary>
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)
         {
-            // 验证窗口句柄有效
-            if (hwnd == IntPtr.Zero || !User32.IsWindow(hwnd))
-            {
-                LogService.LogError($"无效的窗口句柄: {hwnd}", null);
-                return;
-            }
+            // 使用绝对坐标，直接定位（参考TinyTask方式）
+            int screenX = action.X;
+            int screenY = action.Y;
             
-            // 获取当前窗口位置（用于验证）
-            if (!User32.GetWindowRect(hwnd, out var rect))
-            {
-                LogService.LogError($"无法获取窗口位置，hwnd={hwnd}", null);
-                return;
-            }
-            
-            int screenX, screenY;
-            if (action.Relative)
-            {
-                // 关键修复：必须使用录制时保存的窗口位置，而不是实时获取的窗口位置
-                // 因为窗口可能被移动了，但相对坐标是基于录制时的窗口位置计算的
-                int windowLeft;
-                int windowTop;
-                
-                // 优先使用录制时保存的窗口位置
-                if (_currentTask?.TargetWindow != null && 
-                    _currentTask.TargetWindow.WindowLeft != 0 && 
-                    _currentTask.TargetWindow.WindowTop != 0)
-                {
-                    int currentWidth = rect.Right - rect.Left;
-                    int currentHeight = rect.Bottom - rect.Top;
-                    
-                    // 验证窗口大小是否匹配（确保是同一个窗口）
-                    if (_currentTask.TargetWindow.Rect != null &&
-                        Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
-                        Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
-                    {
-                        // 使用录制时的窗口位置（关键！）
-                        windowLeft = _currentTask.TargetWindow.WindowLeft;
-                        windowTop = _currentTask.TargetWindow.WindowTop;
-                        LogService.Log($"使用录制时的窗口位置: ({windowLeft},{windowTop})");
-                    }
-                    else
-                    {
-                        // 窗口大小不匹配，使用当前窗口位置（后备方案）
-                        windowLeft = rect.Left;
-                        windowTop = rect.Top;
-                        LogService.LogWarning($"窗口大小不匹配，使用当前窗口位置: ({windowLeft},{windowTop})");
-                    }
-                }
-                else
-                {
-                    // 没有保存的窗口位置，使用当前窗口位置（后备方案）
-                    windowLeft = rect.Left;
-                    windowTop = rect.Top;
-                    LogService.LogWarning($"未找到录制时的窗口位置，使用当前窗口位置: ({windowLeft},{windowTop})");
-                }
-                
-                // 使用录制时的窗口位置 + 相对坐标 = 屏幕绝对坐标
-                screenX = windowLeft + action.X;
-                screenY = windowTop + action.Y;
-                LogService.Log($"相对坐标转换: 窗口({windowLeft},{windowTop}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
-                
-                // 验证相对坐标是否在合理范围内（防止坐标错误）
-                int windowWidth = rect.Right - rect.Left;
-                int windowHeight = rect.Bottom - rect.Top;
-                if (action.X < -100 || action.X > windowWidth + 100 || 
-                    action.Y < -100 || action.Y > windowHeight + 100)
-                {
-                    LogService.LogWarning($"警告: 相对坐标({action.X},{action.Y})可能超出窗口范围({windowWidth}x{windowHeight})");
-                }
-            }
-            else
-            {
-                // 绝对坐标：直接使用
-                screenX = action.X;
-                screenY = action.Y;
-                LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
-            }
-
             // 验证坐标在屏幕范围内
             var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
             if (screenX < screenBounds.Left || screenX > screenBounds.Right || 
                 screenY < screenBounds.Top || screenY > screenBounds.Bottom)
             {
-                LogService.LogWarning($"警告: 屏幕坐标({screenX},{screenY})超出屏幕范围({screenBounds.Width}x{screenBounds.Height})");
-                // 限制到屏幕范围内
+                LogService.LogWarning($"警告: 屏幕坐标({screenX},{screenY})超出屏幕范围，已限制");
                 screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
                 screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
-                LogService.LogWarning($"坐标已限制为: ({screenX},{screenY})");
             }
             
-            // 平滑移动鼠标（参考TinyTask的实现）
-            SmoothMoveMouse(screenX, screenY);
-            Thread.Sleep(50);
+            // 直接定位鼠标（参考TinyTask，不使用平滑移动）
+            User32.SetCursorPos(screenX, screenY);
+            Thread.Sleep(10);  // 短暂延迟，确保鼠标移动到位
             
             // 执行点击
             var inputs = new User32.INPUT[2];
@@ -391,91 +315,27 @@ namespace AutoDaily.Core.Engine
 
         /// <summary>
         /// 执行鼠标移动操作
-        /// 关键：必须使用录制时保存的窗口位置计算坐标，与PerformMouseClick保持一致
+        /// 使用绝对坐标，直接定位（参考TinyTask方式）
         /// </summary>
         private void PerformMouseMove(ActionModel action, IntPtr hwnd)
         {
-            // 验证窗口句柄有效
-            if (hwnd == IntPtr.Zero || !User32.IsWindow(hwnd))
-            {
-                LogService.LogWarning("无效的窗口句柄，跳过鼠标移动");
-                return;
-            }
+            // 使用绝对坐标，直接定位（参考TinyTask方式）
+            int screenX = action.X;
+            int screenY = action.Y;
             
-            // 获取当前窗口位置（用于验证）
-            if (!User32.GetWindowRect(hwnd, out var rect))
-            {
-                LogService.LogWarning("无法获取窗口位置，跳过鼠标移动");
-                return;
-            }
-            
-            int screenX, screenY;
-            if (action.Relative)
-            {
-                // 关键修复：必须使用录制时保存的窗口位置（与PerformMouseClick保持一致）
-                int windowLeft;
-                int windowTop;
-                
-                // 优先使用录制时保存的窗口位置
-                if (_currentTask?.TargetWindow != null && 
-                    _currentTask.TargetWindow.WindowLeft != 0 && 
-                    _currentTask.TargetWindow.WindowTop != 0)
-                {
-                    int currentWidth = rect.Right - rect.Left;
-                    int currentHeight = rect.Bottom - rect.Top;
-                    
-                    // 验证窗口大小是否匹配（确保是同一个窗口）
-                    if (_currentTask.TargetWindow.Rect != null &&
-                        Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
-                        Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
-                    {
-                        // 使用录制时的窗口位置（关键！）
-                        windowLeft = _currentTask.TargetWindow.WindowLeft;
-                        windowTop = _currentTask.TargetWindow.WindowTop;
-                    }
-                    else
-                    {
-                        // 窗口大小不匹配，使用当前窗口位置（后备方案）
-                        windowLeft = rect.Left;
-                        windowTop = rect.Top;
-                    }
-                }
-                else
-                {
-                    // 没有保存的窗口位置，使用当前窗口位置（后备方案）
-                    windowLeft = rect.Left;
-                    windowTop = rect.Top;
-                }
-                
-                // 使用录制时的窗口位置 + 相对坐标 = 屏幕绝对坐标
-                screenX = windowLeft + action.X;
-                screenY = windowTop + action.Y;
-                
-                // 验证相对坐标是否合理（防止异常坐标）
-                int windowWidth = rect.Right - rect.Left;
-                int windowHeight = rect.Bottom - rect.Top;
-                if (action.X < -100 || action.X > windowWidth + 100 || 
-                    action.Y < -100 || action.Y > windowHeight + 100)
-                {
-                    LogService.LogWarning($"警告: 鼠标移动相对坐标异常 ({action.X}, {action.Y})，窗口({windowWidth}x{windowHeight})，跳过");
-                    return;
-                }
-            }
-            else
-            {
-                // 绝对坐标：直接使用
-                screenX = action.X;
-                screenY = action.Y;
-            }
-
-            // 验证坐标在屏幕范围内，防止移动到屏幕边缘
+            // 验证坐标在屏幕范围内
             var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-            screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
-            screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            if (screenX < screenBounds.Left || screenX > screenBounds.Right || 
+                screenY < screenBounds.Top || screenY > screenBounds.Bottom)
+            {
+                LogService.LogWarning($"警告: 鼠标移动坐标超出屏幕范围，已限制");
+                screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+                screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
+            }
 
-            // 平滑移动鼠标
-            SmoothMoveMouse(screenX, screenY);
-            Thread.Sleep(50);
+            // 直接定位鼠标（参考TinyTask，不使用平滑移动）
+            User32.SetCursorPos(screenX, screenY);
+            Thread.Sleep(10);  // 短暂延迟
         }
 
         private void SmoothMoveMouse(int targetX, int targetY)
@@ -573,24 +433,22 @@ namespace AutoDaily.Core.Engine
 
         private void PerformMouseWheel(ActionModel action, IntPtr hwnd)
         {
-            // 先移动鼠标到目标位置
-            if (!User32.GetWindowRect(hwnd, out var rect))
-                return;
-
-            int screenX, screenY;
-            if (action.Relative)
+            // 使用绝对坐标，直接定位
+            int screenX = action.X;
+            int screenY = action.Y;
+            
+            // 验证坐标在屏幕范围内
+            var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+            if (screenX < screenBounds.Left || screenX > screenBounds.Right || 
+                screenY < screenBounds.Top || screenY > screenBounds.Bottom)
             {
-                screenX = rect.Left + action.X;
-                screenY = rect.Top + action.Y;
-            }
-            else
-            {
-                screenX = action.X;
-                screenY = action.Y;
+                screenX = Math.Max(screenBounds.Left, Math.Min(screenX, screenBounds.Right - 1));
+                screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
             }
 
+            // 直接定位鼠标
             User32.SetCursorPos(screenX, screenY);
-            Thread.Sleep(50);
+            Thread.Sleep(10);
 
             // 执行滚轮操作
             var inputs = new User32.INPUT[1];

@@ -112,7 +112,8 @@ namespace AutoDaily.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(255, 59, 48), // Apple红色
                 BackColor = Color.White,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                AutoSize = false  // 确保按钮大小固定
             };
             _recordButton.FlatAppearance.BorderColor = Color.FromArgb(255, 59, 48);
             _recordButton.FlatAppearance.BorderSize = 2;
@@ -164,7 +165,7 @@ namespace AutoDaily.UI.Forms
             {
                 Size = new Size(cardWidth, 60), // 默认关闭状态60px，开启后动态调整
                 BackColor = Color.FromArgb(248, 248, 248), // Apple浅灰背景
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right // 自适应宽度
+                Anchor = AnchorStyles.None  // 不使用Anchor，使用居中定位，确保与操作卡片对齐
             };
             // 居中计算将在Resize事件中处理
             CenterCard(_scheduleCard, 210);
@@ -227,15 +228,18 @@ namespace AutoDaily.UI.Forms
                 Visible = false
             };
 
-            // 定时运行提示信息（开启后显示，参考Apple设计：增加行间距）
+            // 定时运行提示信息（开启后显示，参考Apple设计：增加行间距，支持自动换行）
             var scheduleHintLabel = new Label
             {
                 Name = "ScheduleTimeConfig",
-                Text = "⚠️ 请保持软件运行，不要关闭或让电脑睡眠",
+                Text = "⚠️ 请保持软件运行，\n不要关闭或让电脑睡眠",  // 手动换行，确保显示完整
                 Font = new Font("Microsoft YaHei", FONT_SIZE_WARNING, FontStyle.Regular),
                 ForeColor = Color.FromArgb(255, 149, 0), // Apple橙色
                 Location = new Point(20, 120), // 从105增加到120，增加行间距
-                Size = new Size(cardWidth - 40, 20), // 适应卡片宽度，增加高度
+                Size = new Size(cardWidth - 40, 50), // 增加高度以支持两行文字
+                AutoSize = false,  // 固定大小
+                AutoEllipsis = false,  // 不使用省略号
+                TextAlign = ContentAlignment.TopLeft,  // 顶部对齐
                 Visible = false
             };
 
@@ -320,8 +324,13 @@ namespace AutoDaily.UI.Forms
             int cardWidth = 300; // 与录制组件同宽
             if (isEnabled)
             {
-                // 自适应高度：根据内容计算所需高度
-                _scheduleCard.Size = new Size(cardWidth, 160); // 增加到160，确保所有内容可见
+                // 自适应高度：根据提示文字的实际高度计算
+                var hintLabel = _scheduleCard.Controls.OfType<Label>()
+                    .FirstOrDefault(l => l.Name == "ScheduleTimeConfig" && l.Text.Contains("⚠️"));
+                int hintHeight = hintLabel != null ? hintLabel.Height : 40;
+                // 计算总高度：开关行(60) + 时间配置行(40) + 下次运行行(25) + 提示行(动态) + 边距(20)
+                int totalHeight = 60 + 40 + 25 + hintHeight + 20;
+                _scheduleCard.Size = new Size(cardWidth, totalHeight);
             }
             else
             {
@@ -393,9 +402,10 @@ namespace AutoDaily.UI.Forms
             _isRecording = true;
             _statusIndicator.Text = "🟡 录制中";
             _statusIndicator.ForeColor = Color.FromArgb(255, 193, 7);
-            _recordButton.Text = "⏹ 停止录制";
+            _recordButton.Text = "⏹ 停止";
             _recordButton.BackColor = Color.FromArgb(244, 67, 54);
             _recordButton.ForeColor = Color.White;
+            _recordButton.Size = new Size(130, 60);  // 确保按钮大小一致，文字显示完整
 
             // 录制时最小化主窗口，不显示弹窗（避免遮挡用户操作）
             this.WindowState = FormWindowState.Minimized;
@@ -411,6 +421,7 @@ namespace AutoDaily.UI.Forms
             _recordButton.Text = "🔴 录制";
             _recordButton.BackColor = Color.White;
             _recordButton.ForeColor = Color.FromArgb(244, 67, 54);
+            _recordButton.Size = new Size(130, 60);  // 确保按钮大小一致
 
             // 恢复主窗口显示
             this.Show();
@@ -572,8 +583,13 @@ namespace AutoDaily.UI.Forms
             int cardWidth = 300; // 与录制组件同宽
             if (isEnabled)
             {
-                // 自适应高度：根据内容计算所需高度（提示信息在125位置，高度25，所以需要150）
-                _scheduleCard.Size = new Size(cardWidth, 160); // 增加到160，确保所有内容可见
+                // 自适应高度：根据提示文字的实际高度计算
+                var hintLabel = _scheduleCard.Controls.OfType<Label>()
+                    .FirstOrDefault(l => l.Name == "ScheduleTimeConfig" && l.Text.Contains("⚠️"));
+                int hintHeight = hintLabel != null ? hintLabel.Height : 40;
+                // 计算总高度：开关行(60) + 时间配置行(40) + 下次运行行(25) + 提示行(动态) + 边距(20)
+                int totalHeight = 60 + 40 + 25 + hintHeight + 20;
+                _scheduleCard.Size = new Size(cardWidth, totalHeight);
             }
             else
             {

@@ -198,15 +198,18 @@ namespace AutoDaily.Core.Engine
                     }
                 }
                 
-                // 计算相对坐标：使用录制时保存的窗口位置（关键修复！）
-                int relX = point.X - windowLeft;
-                int relY = point.Y - windowTop;
+                // 使用绝对坐标（直接记录屏幕坐标，参考TinyTask方式）
+                // 不计算相对坐标，避免窗口位置变化导致的坐标错误
+                int screenX = point.X;
+                int screenY = point.Y;
                 
-                // 验证相对坐标是否合理（防止计算错误）
-                if (relX < -1000 || relX > 10000 || relY < -1000 || relY > 10000)
+                // 验证坐标是否在屏幕范围内
+                var screenBounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+                if (screenX < screenBounds.Left || screenX > screenBounds.Right || 
+                    screenY < screenBounds.Top || screenY > screenBounds.Bottom)
                 {
                     // 坐标异常，跳过
-                    LogService.LogWarning($"警告: 相对坐标异常 ({relX}, {relY})，窗口位置({windowLeft},{windowTop})，鼠标位置({point.X},{point.Y})，跳过");
+                    LogService.LogWarning($"警告: 屏幕坐标异常 ({screenX}, {screenY})，跳过");
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
                 }
 
@@ -216,9 +219,9 @@ namespace AutoDaily.Core.Engine
                     AddAction(new ActionModel
                     {
                         Type = "MouseMove",
-                        X = relX,
-                        Y = relY,
-                        Relative = true
+                        X = screenX,
+                        Y = screenY,
+                        Relative = false  // 使用绝对坐标
                     });
                     _lastActionTime = DateTime.Now;
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
@@ -233,9 +236,9 @@ namespace AutoDaily.Core.Engine
                     AddAction(new ActionModel
                     {
                         Type = "MouseClick",
-                        X = relX,
-                        Y = relY,
-                        Relative = true,
+                        X = screenX,
+                        Y = screenY,
+                        Relative = false,  // 使用绝对坐标
                         Button = "Left"
                     });
                     _lastActionTime = DateTime.Now;
@@ -245,9 +248,9 @@ namespace AutoDaily.Core.Engine
                     AddAction(new ActionModel
                     {
                         Type = "MouseClick",
-                        X = relX,
-                        Y = relY,
-                        Relative = true,
+                        X = screenX,
+                        Y = screenY,
+                        Relative = false,  // 使用绝对坐标
                         Button = "Right"
                     });
                     _lastActionTime = DateTime.Now;
@@ -264,9 +267,9 @@ namespace AutoDaily.Core.Engine
                     AddAction(new ActionModel
                     {
                         Type = "MouseWheel",
-                        X = relX,
-                        Y = relY,
-                        Relative = true,
+                        X = screenX,
+                        Y = screenY,
+                        Relative = false,  // 使用绝对坐标
                         Param = delta
                     });
                     _lastActionTime = DateTime.Now;
