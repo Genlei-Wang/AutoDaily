@@ -42,7 +42,7 @@ namespace AutoDaily.Core.Services
         #endregion
 
         #region 私有字段
-        private readonly Timer _timer;
+        private readonly System.Timers.Timer _timer;
         private readonly TaskService _taskService;
         private readonly Action<Task> _onTaskTriggered;
         private DateTime? _lastTriggerTime; // 防止重复触发
@@ -60,18 +60,12 @@ namespace AutoDaily.Core.Services
             _onTaskTriggered = onTaskTriggered ?? throw new ArgumentNullException(nameof(onTaskTriggered));
 
             // 创建定时器，初始间隔为默认值（60秒）
-            _timer = new Timer(DEFAULT_CHECK_INTERVAL_MS);
+            _timer = new System.Timers.Timer(DEFAULT_CHECK_INTERVAL_MS);
             _timer.Elapsed += Timer_Elapsed;
             _timer.AutoReset = true;
             _timer.Start();
         }
         #endregion
-
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            CheckSchedule();
-            AdjustTimerInterval(); // 动态调整检查间隔
-        }
 
         #region 私有方法
         /// <summary>
