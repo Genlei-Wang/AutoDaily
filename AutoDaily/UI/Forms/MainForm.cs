@@ -555,6 +555,9 @@ namespace AutoDaily.UI.Forms
             task.Schedule.Enabled = _scheduleToggle.Checked;
             _taskService.UpdateCurrentTask(task);
             
+            // 设置开机自启
+            _scheduleService.SetStartup(_scheduleToggle.Checked);
+            
             // 根据开关状态显示/隐藏配置项
             bool isEnabled = _scheduleToggle.Checked;
             foreach (Control ctrl in _scheduleCard.Controls)
@@ -699,21 +702,18 @@ namespace AutoDaily.UI.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // 检查是否启用了定时运行
-            var task = _taskService.GetCurrentTask();
-            if (task.Schedule.Enabled)
+            // 如果是用户点击关闭按钮（UserClosing），且启用了定时运行
+            if (e.CloseReason == CloseReason.UserClosing)
             {
-                // 如果启用了定时运行，提示用户
-                var result = MessageBox.Show(
-                    "关闭软件后将无法执行定时运行任务。\n\n是否确定要关闭？",
-                    "提示",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning,
-                    MessageBoxDefaultButton.Button2);
-                
-                if (result == DialogResult.No)
+                var task = _taskService.GetCurrentTask();
+                if (task.Schedule.Enabled)
                 {
                     e.Cancel = true; // 取消关闭
+                    this.Hide();     // 隐藏窗口
+                    
+                    // 显示托盘图标和提示
+                    _notifyIcon.Visible = true;
+                    _notifyIcon.ShowBalloonTip(3000, "AutoDaily 已隐藏", "软件正在后台运行，双击托盘图标可重新打开。", ToolTipIcon.Info);
                     return;
                 }
             }

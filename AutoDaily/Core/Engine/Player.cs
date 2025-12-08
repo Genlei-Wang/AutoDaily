@@ -244,9 +244,20 @@ namespace AutoDaily.Core.Engine
             }
         }
 
+        /// <summary>
+        /// 执行鼠标点击操作
+        /// 关键：必须使用录制时保存的窗口位置计算坐标，而不是实时获取的窗口位置
+        /// </summary>
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)
         {
-            // 重新获取窗口位置（窗口可能移动了）
+            // 验证窗口句柄有效
+            if (hwnd == IntPtr.Zero || !User32.IsWindow(hwnd))
+            {
+                LogService.LogError($"无效的窗口句柄: {hwnd}", null);
+                return;
+            }
+            
+            // 获取当前窗口位置（用于验证）
             if (!User32.GetWindowRect(hwnd, out var rect))
             {
                 LogService.LogError($"无法获取窗口位置，hwnd={hwnd}", null);
@@ -256,12 +267,12 @@ namespace AutoDaily.Core.Engine
             int screenX, screenY;
             if (action.Relative)
             {
-                // 关键修复：优先使用录制时保存的窗口位置
-                // 这样可以确保坐标一致性，即使窗口被移动了
-                int windowLeft = rect.Left;
-                int windowTop = rect.Top;
+                // 关键修复：必须使用录制时保存的窗口位置，而不是实时获取的窗口位置
+                // 因为窗口可能被移动了，但相对坐标是基于录制时的窗口位置计算的
+                int windowLeft;
+                int windowTop;
                 
-                // 如果任务中保存了录制时的窗口位置，且窗口大小匹配，使用保存的位置
+                // 优先使用录制时保存的窗口位置
                 if (_currentTask?.TargetWindow != null && 
                     _currentTask.TargetWindow.WindowLeft != 0 && 
                     _currentTask.TargetWindow.WindowTop != 0)
@@ -274,28 +285,44 @@ namespace AutoDaily.Core.Engine
                         Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
                         Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
                     {
-                        // 使用录制时的窗口位置，确保坐标一致性
+                        // 使用录制时的窗口位置（关键！）
                         windowLeft = _currentTask.TargetWindow.WindowLeft;
                         windowTop = _currentTask.TargetWindow.WindowTop;
                         LogService.Log($"使用录制时的窗口位置: ({windowLeft},{windowTop})");
                     }
+                    else
+                    {
+                        // 窗口大小不匹配，使用当前窗口位置（后备方案）
+                        windowLeft = rect.Left;
+                        windowTop = rect.Top;
+                        LogService.LogWarning($"窗口大小不匹配，使用当前窗口位置: ({windowLeft},{windowTop})");
+                    }
+                }
+                else
+                {
+                    // 没有保存的窗口位置，使用当前窗口位置（后备方案）
+                    windowLeft = rect.Left;
+                    windowTop = rect.Top;
+                    LogService.LogWarning($"未找到录制时的窗口位置，使用当前窗口位置: ({windowLeft},{windowTop})");
                 }
                 
-                // 使用窗口左上角 + 相对坐标 = 屏幕坐标
+                // 使用录制时的窗口位置 + 相对坐标 = 屏幕绝对坐标
                 screenX = windowLeft + action.X;
                 screenY = windowTop + action.Y;
                 LogService.Log($"相对坐标转换: 窗口({windowLeft},{windowTop}) + 相对({action.X},{action.Y}) = 屏幕({screenX},{screenY})");
                 
-                // 验证坐标是否在窗口范围内（防止坐标错误）
+                // 验证相对坐标是否在合理范围内（防止坐标错误）
                 int windowWidth = rect.Right - rect.Left;
                 int windowHeight = rect.Bottom - rect.Top;
-                if (action.X < 0 || action.X > windowWidth || action.Y < 0 || action.Y > windowHeight)
+                if (action.X < -100 || action.X > windowWidth + 100 || 
+                    action.Y < -100 || action.Y > windowHeight + 100)
                 {
-                    LogService.LogWarning($"警告: 相对坐标({action.X},{action.Y})超出窗口范围({windowWidth}x{windowHeight})");
+                    LogService.LogWarning($"警告: 相对坐标({action.X},{action.Y})可能超出窗口范围({windowWidth}x{windowHeight})");
                 }
             }
             else
             {
+                // 绝对坐标：直接使用
                 screenX = action.X;
                 screenY = action.Y;
                 LogService.Log($"绝对坐标: 屏幕({screenX},{screenY})");
@@ -362,9 +389,20 @@ namespace AutoDaily.Core.Engine
             Thread.Sleep(100);
         }
 
+        /// <summary>
+        /// 执行鼠标移动操作
+        /// 关键：必须使用录制时保存的窗口位置计算坐标，与PerformMouseClick保持一致
+        /// </summary>
         private void PerformMouseMove(ActionModel action, IntPtr hwnd)
         {
-            // 重新获取窗口位置
+            // 验证窗口句柄有效
+            if (hwnd == IntPtr.Zero || !User32.IsWindow(hwnd))
+            {
+                LogService.LogWarning("无效的窗口句柄，跳过鼠标移动");
+                return;
+            }
+            
+            // 获取当前窗口位置（用于验证）
             if (!User32.GetWindowRect(hwnd, out var rect))
             {
                 LogService.LogWarning("无法获取窗口位置，跳过鼠标移动");
@@ -374,10 +412,11 @@ namespace AutoDaily.Core.Engine
             int screenX, screenY;
             if (action.Relative)
             {
-                // 关键修复：优先使用录制时保存的窗口位置（与PerformMouseClick保持一致）
-                int windowLeft = rect.Left;
-                int windowTop = rect.Top;
+                // 关键修复：必须使用录制时保存的窗口位置（与PerformMouseClick保持一致）
+                int windowLeft;
+                int windowTop;
                 
+                // 优先使用录制时保存的窗口位置
                 if (_currentTask?.TargetWindow != null && 
                     _currentTask.TargetWindow.WindowLeft != 0 && 
                     _currentTask.TargetWindow.WindowTop != 0)
@@ -385,15 +424,30 @@ namespace AutoDaily.Core.Engine
                     int currentWidth = rect.Right - rect.Left;
                     int currentHeight = rect.Bottom - rect.Top;
                     
+                    // 验证窗口大小是否匹配（确保是同一个窗口）
                     if (_currentTask.TargetWindow.Rect != null &&
                         Math.Abs(currentWidth - _currentTask.TargetWindow.Rect.Width) < 10 &&
                         Math.Abs(currentHeight - _currentTask.TargetWindow.Rect.Height) < 10)
                     {
+                        // 使用录制时的窗口位置（关键！）
                         windowLeft = _currentTask.TargetWindow.WindowLeft;
                         windowTop = _currentTask.TargetWindow.WindowTop;
                     }
+                    else
+                    {
+                        // 窗口大小不匹配，使用当前窗口位置（后备方案）
+                        windowLeft = rect.Left;
+                        windowTop = rect.Top;
+                    }
+                }
+                else
+                {
+                    // 没有保存的窗口位置，使用当前窗口位置（后备方案）
+                    windowLeft = rect.Left;
+                    windowTop = rect.Top;
                 }
                 
+                // 使用录制时的窗口位置 + 相对坐标 = 屏幕绝对坐标
                 screenX = windowLeft + action.X;
                 screenY = windowTop + action.Y;
                 
@@ -403,12 +457,13 @@ namespace AutoDaily.Core.Engine
                 if (action.X < -100 || action.X > windowWidth + 100 || 
                     action.Y < -100 || action.Y > windowHeight + 100)
                 {
-                    LogService.LogWarning($"警告: 鼠标移动相对坐标异常 ({action.X}, {action.Y})，跳过");
+                    LogService.LogWarning($"警告: 鼠标移动相对坐标异常 ({action.X}, {action.Y})，窗口({windowWidth}x{windowHeight})，跳过");
                     return;
                 }
             }
             else
             {
+                // 绝对坐标：直接使用
                 screenX = action.X;
                 screenY = action.Y;
             }

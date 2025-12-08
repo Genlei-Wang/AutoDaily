@@ -82,45 +82,62 @@ namespace AutoDaily.Core.Engine
             OnRecordingComplete?.Invoke(_actions, _targetWindow);
         }
 
+        /// <summary>
+        /// 捕获当前活动窗口信息（录制开始时调用）
+        /// 关键：必须准确保存窗口位置，用于后续计算相对坐标
+        /// </summary>
         private void CaptureCurrentWindow()
         {
             var hwnd = User32.GetForegroundWindow();
-            if (hwnd != IntPtr.Zero)
+            if (hwnd == IntPtr.Zero || !User32.IsWindow(hwnd))
             {
-                if (_targetWindow == null)
-                {
-                    _targetWindow = new WindowInfo();
-                }
-                
-                User32.GetWindowRect(hwnd, out var rect);
-                if (_targetWindow.Rect == null)
-                {
-                    _targetWindow.Rect = new WindowRect();
-                }
-                
-                // 保存窗口的完整位置和大小信息
-                _targetWindow.Rect.Width = rect.Right - rect.Left;
-                _targetWindow.Rect.Height = rect.Bottom - rect.Top;
-                _targetWindow.WindowLeft = rect.Left;
-                _targetWindow.WindowTop = rect.Top;
+                LogService.LogWarning("录制开始时无法获取活动窗口");
+                return;
+            }
+            
+            if (_targetWindow == null)
+            {
+                _targetWindow = new WindowInfo();
+            }
+            
+            // 获取窗口位置和大小（关键：必须准确获取，用于后续相对坐标计算）
+            if (!User32.GetWindowRect(hwnd, out var rect))
+            {
+                LogService.LogWarning("录制开始时无法获取窗口位置");
+                return;
+            }
+            
+            if (_targetWindow.Rect == null)
+            {
+                _targetWindow.Rect = new WindowRect();
+            }
+            
+            // 保存窗口的完整位置和大小信息（这是坐标计算的基础）
+            _targetWindow.Rect.Width = rect.Right - rect.Left;
+            _targetWindow.Rect.Height = rect.Bottom - rect.Top;
+            _targetWindow.WindowLeft = rect.Left;  // 关键：窗口左上角的屏幕X坐标
+            _targetWindow.WindowTop = rect.Top;   // 关键：窗口左上角的屏幕Y坐标
 
-                // 获取窗口标题
-                int length = User32.GetWindowTextLength(hwnd);
-                if (length > 0)
-                {
-                    StringBuilder sb = new StringBuilder(length + 1);
-                    User32.GetWindowText(hwnd, sb, sb.Capacity);
-                    _targetWindow.Title = sb.ToString();
-                }
+            // 获取窗口标题（用于窗口识别）
+            int length = User32.GetWindowTextLength(hwnd);
+            if (length > 0)
+            {
+                StringBuilder sb = new StringBuilder(length + 1);
+                User32.GetWindowText(hwnd, sb, sb.Capacity);
+                _targetWindow.Title = sb.ToString();
+            }
 
-                // 获取进程名
-                try
-                {
-                    GetWindowThreadProcessId(hwnd, out uint processId);
-                    var process = Process.GetProcessById((int)processId);
-                    _targetWindow.ProcessName = process.ProcessName;
-                }
-                catch { }
+            // 获取进程名（用于窗口识别，优先级最高）
+            try
+            {
+                GetWindowThreadProcessId(hwnd, out uint processId);
+                var process = Process.GetProcessById((int)processId);
+                _targetWindow.ProcessName = process.ProcessName;
+                LogService.Log($"录制目标窗口: {_targetWindow.ProcessName}, 位置({_targetWindow.WindowLeft},{_targetWindow.WindowTop}), 大小({_targetWindow.Rect.Width}x{_targetWindow.Rect.Height})");
+            }
+            catch (Exception ex)
+            {
+                LogService.LogWarning($"获取进程名失败: {ex.Message}");
             }
         }
 
@@ -130,30 +147,68 @@ namespace AutoDaily.Core.Engine
             {
                 var timeSinceLastAction = (DateTime.Now - _lastActionTime).TotalMilliseconds;
 
-                // 获取鼠标位置
+                // 获取鼠标位置（屏幕绝对坐标）
                 User32.GetCursorPos(out var point);
-                var hwnd = User32.WindowFromPoint(point);
                 
-                if (hwnd == IntPtr.Zero)
+                // 关键修复：录制时应该始终使用录制开始时捕获的目标窗口
+                // 而不是每次重新获取窗口（可能获取到错误的窗口，导致坐标计算错误）
+                IntPtr targetHwnd = IntPtr.Zero;
+                int windowLeft = 0;
+                int windowTop = 0;
+                
+                // 优先使用录制开始时保存的目标窗口
+                if (_targetWindow != null && !string.IsNullOrEmpty(_targetWindow.ProcessName))
                 {
-                    hwnd = User32.GetForegroundWindow();
+                    try
+                    {
+                        var processes = System.Diagnostics.Process.GetProcessesByName(
+                            _targetWindow.ProcessName.Replace(".exe", ""));
+                        if (processes.Length > 0)
+                        {
+                            targetHwnd = processes[0].MainWindowHandle;
+                            if (targetHwnd != IntPtr.Zero && User32.IsWindow(targetHwnd))
+                            {
+                                // 使用录制时保存的窗口位置（关键！）
+                                windowLeft = _targetWindow.WindowLeft;
+                                windowTop = _targetWindow.WindowTop;
+                            }
+                        }
+                    }
+                    catch { }
                 }
                 
-                if (hwnd != IntPtr.Zero)
+                // 如果目标窗口无效，尝试获取当前鼠标下的窗口（后备方案）
+                if (targetHwnd == IntPtr.Zero || windowLeft == 0 || windowTop == 0)
                 {
-                    User32.GetWindowRect(hwnd, out var rect);
-                    
-                    // 计算相对坐标（使用实际窗口位置，不要覆盖）
-                    int relX = point.X - rect.Left;
-                    int relY = point.Y - rect.Top;
-                    
-                    // 验证相对坐标是否合理（防止计算错误）
-                    if (relX < -1000 || relX > 10000 || relY < -1000 || relY > 10000)
+                    targetHwnd = User32.WindowFromPoint(point);
+                    if (targetHwnd == IntPtr.Zero)
                     {
-                        // 坐标异常，跳过
-                        LogService.LogWarning($"警告: 相对坐标异常 ({relX}, {relY})，跳过");
+                        targetHwnd = User32.GetForegroundWindow();
+                    }
+                    
+                    if (targetHwnd != IntPtr.Zero && User32.GetWindowRect(targetHwnd, out var rect))
+                    {
+                        windowLeft = rect.Left;
+                        windowTop = rect.Top;
+                    }
+                    else
+                    {
+                        // 无法获取窗口，跳过此次操作
                         return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
                     }
+                }
+                
+                // 计算相对坐标：使用录制时保存的窗口位置（关键修复！）
+                int relX = point.X - windowLeft;
+                int relY = point.Y - windowTop;
+                
+                // 验证相对坐标是否合理（防止计算错误）
+                if (relX < -1000 || relX > 10000 || relY < -1000 || relY > 10000)
+                {
+                    // 坐标异常，跳过
+                    LogService.LogWarning($"警告: 相对坐标异常 ({relX}, {relY})，窗口位置({windowLeft},{windowTop})，鼠标位置({point.X},{point.Y})，跳过");
+                    return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+                }
 
                     // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
                     if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
