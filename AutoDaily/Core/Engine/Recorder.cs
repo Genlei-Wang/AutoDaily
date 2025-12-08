@@ -210,67 +210,66 @@ namespace AutoDaily.Core.Engine
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
                 }
 
-                    // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
-                    if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
+                // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
+                if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
+                {
+                    AddAction(new ActionModel
                     {
-                        AddAction(new ActionModel
-                        {
-                            Type = "MouseMove",
-                            X = relX,
-                            Y = relY,
-                            Relative = true
-                        });
-                        _lastActionTime = DateTime.Now;
-                        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
-                    }
+                        Type = "MouseMove",
+                        X = relX,
+                        Y = relY,
+                        Relative = true
+                    });
+                    _lastActionTime = DateTime.Now;
+                    return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+                }
 
-                    // 处理鼠标点击
-                    if (timeSinceLastAction < DEBOUNCE_MS)
-                        return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+                // 处理鼠标点击
+                if (timeSinceLastAction < DEBOUNCE_MS)
+                    return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
 
-                    if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
+                if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
+                {
+                    AddAction(new ActionModel
                     {
-                        AddAction(new ActionModel
-                        {
-                            Type = "MouseClick",
-                            X = relX,
-                            Y = relY,
-                            Relative = true,
-                            Button = "Left"
-                        });
-                        _lastActionTime = DateTime.Now;
-                    }
-                    else if (wParam == (IntPtr)User32.WM_RBUTTONDOWN)
+                        Type = "MouseClick",
+                        X = relX,
+                        Y = relY,
+                        Relative = true,
+                        Button = "Left"
+                    });
+                    _lastActionTime = DateTime.Now;
+                }
+                else if (wParam == (IntPtr)User32.WM_RBUTTONDOWN)
+                {
+                    AddAction(new ActionModel
                     {
-                        AddAction(new ActionModel
-                        {
-                            Type = "MouseClick",
-                            X = relX,
-                            Y = relY,
-                            Relative = true,
-                            Button = "Right"
-                        });
-                        _lastActionTime = DateTime.Now;
-                    }
-                    // 处理鼠标滚轮
-                    else if (wParam == (IntPtr)User32.WM_MOUSEWHEEL)
+                        Type = "MouseClick",
+                        X = relX,
+                        Y = relY,
+                        Relative = true,
+                        Button = "Right"
+                    });
+                    _lastActionTime = DateTime.Now;
+                }
+                // 处理鼠标滚轮
+                else if (wParam == (IntPtr)User32.WM_MOUSEWHEEL)
+                {
+                    // 在低级鼠标钩子中，lParam指向MSLLHOOKSTRUCT
+                    // 结构：POINT pt(8字节) + DWORD mouseData(4字节) + DWORD flags(4字节) + DWORD time(4字节) + ULONG_PTR dwExtraInfo(8字节)
+                    // mouseData的高16位是wheel delta
+                    int mouseData = Marshal.ReadInt32(lParam, 8); // 偏移8字节（跳过POINT）获取mouseData
+                    int delta = (short)((mouseData >> 16) & 0xFFFF); // 高16位是wheel delta（有符号）
+                    
+                    AddAction(new ActionModel
                     {
-                        // 在低级鼠标钩子中，lParam指向MSLLHOOKSTRUCT
-                        // 结构：POINT pt(8字节) + DWORD mouseData(4字节) + DWORD flags(4字节) + DWORD time(4字节) + ULONG_PTR dwExtraInfo(8字节)
-                        // mouseData的高16位是wheel delta
-                        int mouseData = Marshal.ReadInt32(lParam, 8); // 偏移8字节（跳过POINT）获取mouseData
-                        int delta = (short)((mouseData >> 16) & 0xFFFF); // 高16位是wheel delta（有符号）
-                        
-                        AddAction(new ActionModel
-                        {
-                            Type = "MouseWheel",
-                            X = relX,
-                            Y = relY,
-                            Relative = true,
-                            Param = delta
-                        });
-                        _lastActionTime = DateTime.Now;
-                    }
+                        Type = "MouseWheel",
+                        X = relX,
+                        Y = relY,
+                        Relative = true,
+                        Param = delta
+                    });
+                    _lastActionTime = DateTime.Now;
                 }
             }
 
