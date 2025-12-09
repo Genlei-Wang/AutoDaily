@@ -213,8 +213,9 @@ namespace AutoDaily.Core.Engine
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
                 }
 
-                // 处理鼠标移动（记录hover轨迹，但降低频率避免过多数据）
-                if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 200)
+                // 处理鼠标移动（高频采样，但降低记录频率避免过多数据）
+                // 降低阈值到20ms，更高频采样，确保能记录完整的运动轨迹
+                if (wParam == (IntPtr)User32.WM_MOUSEMOVE && timeSinceLastAction > 20)
                 {
                     AddAction(new ActionModel
                     {
@@ -227,8 +228,26 @@ namespace AutoDaily.Core.Engine
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
                 }
 
-                // 处理鼠标点击
-                if (timeSinceLastAction < DEBOUNCE_MS)
+                // 处理鼠标点击（确保精确：点击时立即记录，不受时间限制）
+                // 点击前先记录当前位置（确保点击坐标精确）
+                if (wParam == (IntPtr)User32.WM_LBUTTONDOWN || wParam == (IntPtr)User32.WM_RBUTTONDOWN)
+                {
+                    // 如果距离上次移动超过10ms，先记录一次移动（确保点击坐标精确）
+                    if (timeSinceLastAction > 10)
+                    {
+                        AddAction(new ActionModel
+                        {
+                            Type = "MouseMove",
+                            X = screenX,
+                            Y = screenY,
+                            Relative = false
+                        });
+                    }
+                }
+
+                // 防抖：避免重复点击
+                if (timeSinceLastAction < DEBOUNCE_MS && 
+                    (wParam == (IntPtr)User32.WM_LBUTTONDOWN || wParam == (IntPtr)User32.WM_RBUTTONDOWN))
                     return User32.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
 
                 if (wParam == (IntPtr)User32.WM_LBUTTONDOWN)
@@ -288,19 +307,35 @@ namespace AutoDaily.Core.Engine
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
                     
-                    // 检查修饰键状态
+                    // 检查所有修饰键状态（包括Win键）
                     bool ctrl = (User32.GetAsyncKeyState(User32.VK_CONTROL) & 0x8000) != 0;
                     bool shift = (User32.GetAsyncKeyState(User32.VK_SHIFT) & 0x8000) != 0;
                     bool alt = (User32.GetAsyncKeyState(User32.VK_ALT) & 0x8000) != 0;
+                    bool win = (User32.GetAsyncKeyState(User32.VK_LWIN) & 0x8000) != 0 ||
+                               (User32.GetAsyncKeyState(User32.VK_RWIN) & 0x8000) != 0;
                     
-                    // 记录快捷键组合（Ctrl+C, Ctrl+V等）
-                    if (ctrl || shift || alt)
+                    // 如果是Win键本身，检查是否有其他键同时按下（如Win+D）
+                    if (vkCode == User32.VK_LWIN || vkCode == User32.VK_RWIN)
+                    {
+                        // Win键单独按下，记录Win键
+                        AddAction(new ActionModel
+                        {
+                            Type = "KeyPress",
+                            Param = vkCode,
+                            Text = "Win"
+                        });
+                        _lastActionTime = DateTime.Now;
+                        return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+                    }
+                    
+                    // 记录快捷键组合（包括Win键组合，如Win+D）
+                    if (ctrl || shift || alt || win)
                     {
                         AddAction(new ActionModel
                         {
                             Type = "KeyPress",
                             Param = vkCode,
-                            Text = $"{(ctrl ? "Ctrl+" : "")}{(shift ? "Shift+" : "")}{(alt ? "Alt+" : "")}"
+                            Text = $"{(ctrl ? "Ctrl+" : "")}{(shift ? "Shift+" : "")}{(alt ? "Alt+" : "")}{(win ? "Win+" : "")}"
                         });
                         _lastActionTime = DateTime.Now;
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
@@ -310,11 +345,10 @@ namespace AutoDaily.Core.Engine
                     if (vkCode >= 0x70 && vkCode <= 0x7B)
                         return User32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
 
-                    // 记录特殊键（Enter, Tab, Escape, Win键等）
+                    // 记录特殊键（Enter, Tab, Escape等，Win键已在上面处理）
                     if (vkCode == User32.VK_ENTER || vkCode == User32.VK_TAB || 
                         vkCode == User32.VK_ESCAPE || vkCode == User32.VK_BACK || 
-                        vkCode == User32.VK_DELETE || vkCode == User32.VK_LWIN || 
-                        vkCode == User32.VK_RWIN)
+                        vkCode == User32.VK_DELETE)
                     {
                         AddAction(new ActionModel
                         {

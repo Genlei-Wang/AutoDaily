@@ -246,11 +246,11 @@ namespace AutoDaily.Core.Engine
 
         /// <summary>
         /// 执行鼠标点击操作
-        /// 使用绝对坐标，直接定位（参考TinyTask方式）
+        /// 使用平滑移动复现运动轨迹，然后点击（参考TinyTask：完整复现hover动作）
         /// </summary>
         private void PerformMouseClick(ActionModel action, IntPtr hwnd)
         {
-            // 使用绝对坐标，直接定位（参考TinyTask方式）
+            // 使用绝对坐标
             int screenX = action.X;
             int screenY = action.Y;
             
@@ -264,9 +264,21 @@ namespace AutoDaily.Core.Engine
                 screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
             }
             
-            // 直接定位鼠标（参考TinyTask，不使用平滑移动）
-            User32.SetCursorPos(screenX, screenY);
-            Thread.Sleep(10);  // 短暂延迟，确保鼠标移动到位
+            // 使用平滑移动复现运动轨迹（参考TinyTask：完整复现hover动作）
+            SmoothMoveMouse(screenX, screenY);
+            
+            // 确保鼠标精确移动到目标位置（关键：点击前必须精确到位）
+            User32.GetCursorPos(out var finalPos);
+            if (Math.Abs(finalPos.X - screenX) > 2 || Math.Abs(finalPos.Y - screenY) > 2)
+            {
+                // 如果位置不精确，直接移动到目标位置
+                User32.SetCursorPos(screenX, screenY);
+                Thread.Sleep(5);
+            }
+            else
+            {
+                Thread.Sleep(10);  // 短暂延迟，确保鼠标移动到位
+            }
             
             // 执行点击
             var inputs = new User32.INPUT[2];
@@ -315,11 +327,11 @@ namespace AutoDaily.Core.Engine
 
         /// <summary>
         /// 执行鼠标移动操作
-        /// 使用绝对坐标，直接定位（参考TinyTask方式）
+        /// 使用平滑移动复现运动轨迹（参考TinyTask：完整复现hover动作和运动轨迹）
         /// </summary>
         private void PerformMouseMove(ActionModel action, IntPtr hwnd)
         {
-            // 使用绝对坐标，直接定位（参考TinyTask方式）
+            // 使用绝对坐标
             int screenX = action.X;
             int screenY = action.Y;
             
@@ -333,9 +345,8 @@ namespace AutoDaily.Core.Engine
                 screenY = Math.Max(screenBounds.Top, Math.Min(screenY, screenBounds.Bottom - 1));
             }
 
-            // 直接定位鼠标（参考TinyTask，不使用平滑移动）
-            User32.SetCursorPos(screenX, screenY);
-            Thread.Sleep(10);  // 短暂延迟
+            // 使用平滑移动复现运动轨迹（参考TinyTask）
+            SmoothMoveMouse(screenX, screenY);
         }
 
         private void SmoothMoveMouse(int targetX, int targetY)
@@ -351,22 +362,32 @@ namespace AutoDaily.Core.Engine
             double distance = Math.Sqrt(dx * dx + dy * dy);
 
             // 如果距离很小，直接移动
-            if (distance < 5)
+            if (distance < 2)
             {
                 User32.SetCursorPos(targetX, targetY);
                 return;
             }
 
-            // 平滑移动：分多步移动（参考TinyTask）
-            int steps = Math.Max(5, (int)(distance / 10)); // 每10像素一步
+            // 平滑移动：分多步移动（参考TinyTask：完整复现运动轨迹）
+            // 根据距离动态计算步数，确保轨迹平滑自然
+            // 优化：减少步数间隔，提高移动频率，但保持平滑
+            int steps = Math.Max(2, Math.Min(30, (int)(distance / 3))); // 每3像素一步，最多30步
             for (int i = 1; i <= steps; i++)
             {
                 double ratio = (double)i / steps;
-                int x = currentX + (int)(dx * ratio);
-                int y = currentY + (int)(dy * ratio);
+                // 使用缓动函数（ease-in-out）使移动更自然
+                double easedRatio = ratio < 0.5 
+                    ? 2 * ratio * ratio 
+                    : 1 - Math.Pow(-2 * ratio + 2, 2) / 2;
+                
+                int x = currentX + (int)(dx * easedRatio);
+                int y = currentY + (int)(dy * easedRatio);
                 User32.SetCursorPos(x, y);
-                Thread.Sleep(5); // 每步间隔5ms，实现平滑效果
+                Thread.Sleep(2); // 每步间隔2ms，提高移动频率，减少卡顿
             }
+            
+            // 确保最终位置准确（关键：必须精确到位）
+            User32.SetCursorPos(targetX, targetY);
         }
 
         private void PerformInput(string text)
@@ -476,48 +497,83 @@ namespace AutoDaily.Core.Engine
         {
             int vkCode = action.Param;
             
-            // 处理修饰键组合
+            // 处理修饰键组合（包括Win键）
             bool ctrl = action.Text?.Contains("Ctrl+") == true;
             bool shift = action.Text?.Contains("Shift+") == true;
             bool alt = action.Text?.Contains("Alt+") == true;
+            bool win = action.Text?.Contains("Win+") == true || action.Text == "Win";
+            
+            // 如果是Win键本身（没有其他键）
+            if ((vkCode == User32.VK_LWIN || vkCode == User32.VK_RWIN) && !win && string.IsNullOrEmpty(action.Text))
+            {
+                // Win键单独按下
+                var inputs = new User32.INPUT[2];
+                inputs[0] = CreateKeyInput(vkCode, false);
+                inputs[1] = CreateKeyInput(vkCode, true);
+                User32.SendInput(2, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
+                Thread.Sleep(50);
+                return;
+            }
 
-            var inputs = new List<User32.INPUT>();
+            var inputsList = new List<User32.INPUT>();
 
-            // 按下修饰键
+            // 同时按下所有修饰键（关键：必须同时按下，不能挨个按下）
             if (ctrl)
             {
-                inputs.Add(CreateKeyInput(User32.VK_CONTROL, false));
+                inputsList.Add(CreateKeyInput(User32.VK_CONTROL, false));
             }
             if (shift)
             {
-                inputs.Add(CreateKeyInput(User32.VK_SHIFT, false));
+                inputsList.Add(CreateKeyInput(User32.VK_SHIFT, false));
             }
             if (alt)
             {
-                inputs.Add(CreateKeyInput(User32.VK_ALT, false));
+                inputsList.Add(CreateKeyInput(User32.VK_ALT, false));
+            }
+            if (win)
+            {
+                // Win键通常使用左Win键
+                inputsList.Add(CreateKeyInput(User32.VK_LWIN, false));
             }
 
-            // 按下主键
-            inputs.Add(CreateKeyInput(vkCode, false));
+            // 按下主键（与其他修饰键同时）
+            inputsList.Add(CreateKeyInput(vkCode, false));
+
+            // 一次性发送所有按下事件（确保同时按下）
+            if (inputsList.Count > 0)
+            {
+                User32.SendInput((uint)inputsList.Count, inputsList.ToArray(), Marshal.SizeOf(typeof(User32.INPUT)));
+                Thread.Sleep(10); // 短暂延迟，确保按键被识别
+            }
 
             // 释放主键
-            inputs.Add(CreateKeyInput(vkCode, true));
+            var releaseInputs = new List<User32.INPUT>();
+            releaseInputs.Add(CreateKeyInput(vkCode, true));
 
-            // 释放修饰键（逆序）
+            // 同时释放所有修饰键（逆序释放）
+            if (win)
+            {
+                releaseInputs.Add(CreateKeyInput(User32.VK_LWIN, true));
+            }
             if (alt)
             {
-                inputs.Add(CreateKeyInput(User32.VK_ALT, true));
+                releaseInputs.Add(CreateKeyInput(User32.VK_ALT, true));
             }
             if (shift)
             {
-                inputs.Add(CreateKeyInput(User32.VK_SHIFT, true));
+                releaseInputs.Add(CreateKeyInput(User32.VK_SHIFT, true));
             }
             if (ctrl)
             {
-                inputs.Add(CreateKeyInput(User32.VK_CONTROL, true));
+                releaseInputs.Add(CreateKeyInput(User32.VK_CONTROL, true));
             }
 
-            User32.SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf(typeof(User32.INPUT)));
+            // 一次性发送所有释放事件（确保同时释放）
+            if (releaseInputs.Count > 0)
+            {
+                User32.SendInput((uint)releaseInputs.Count, releaseInputs.ToArray(), Marshal.SizeOf(typeof(User32.INPUT)));
+            }
+            
             Thread.Sleep(50);
         }
 

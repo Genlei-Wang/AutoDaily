@@ -26,6 +26,7 @@ namespace AutoDaily.UI.Forms
         private CancellationTokenSource _playerCancellationTokenSource;
 
         // UI控件
+        private Panel _mainContainer; // 主容器：包含所有内容，在主窗口中居中
         private Label _statusIndicator;
         private Button _recordButton;
         private Button _runButton;
@@ -35,6 +36,7 @@ namespace AutoDaily.UI.Forms
         private Label _scheduleTimeLabel;
         private Label _nextRunLabel;
         private DateTimePicker _timePicker;
+        private Button _saveScheduleButton; // 保存按钮
 
         private bool _isRecording = false;
         private bool _isRunning = false;
@@ -59,6 +61,11 @@ namespace AutoDaily.UI.Forms
             InitializeNotifyIcon();
             LoadTaskData();
             RegisterHotKey();
+            
+            // 初始化时更新主容器大小并居中
+            UpdateMainContainerSize();
+            CenterContainerControls();
+            CenterMainContainer();
         }
 
         private void InitializeComponent()
@@ -80,27 +87,39 @@ namespace AutoDaily.UI.Forms
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(242, 242, 247); // Apple系统背景色
 
-            // 状态指示灯（参考Apple设计：顶部留白更多）
+            // 创建主容器：包含所有内容，在主窗口中上下左右居中
+            int containerWidth = 340; // 容器宽度
+            int containerHeight = 400; // 容器高度（初始值，会根据内容动态调整）
+            _mainContainer = new Panel
+            {
+                Size = new Size(containerWidth, containerHeight),
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.None // 不使用Anchor，使用居中定位
+            };
+            // 居中计算将在Resize事件中处理
+            CenterMainContainer();
+
+            // 状态指示灯（在主容器内，顶部居中）
             _statusIndicator = new Label
             {
                 Text = "🟢 就绪",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_TITLE, FontStyle.Bold),
                 ForeColor = Color.FromArgb(76, 175, 80), // Apple绿色
-                Location = new Point(20, 30), // 从20增加到30，增加顶部间距
+                Location = new Point((containerWidth - 100) / 2, 20), // 水平居中
                 AutoSize = true
             };
+            _mainContainer.Controls.Add(_statusIndicator);
 
-            // 核心操作区卡片（居中，参考Apple设计：卡片宽度适中，左右边距充足）
-            int cardWidth = 300; // 减小宽度，确保不超出且居中
+            // 核心操作区卡片（在主容器内，状态指示灯下方）
+            int cardWidth = 300; // 卡片宽度
             _operationCard = new Panel
             {
                 Size = new Size(cardWidth, 120),
                 BackColor = Color.White,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right // 自适应宽度
+                Location = new Point((containerWidth - cardWidth) / 2, 60) // 水平居中，状态指示灯下方
             };
-            // 居中计算将在Resize事件中处理
-            CenterCard(_operationCard, 70);
-            DrawRoundedPanel(_operationCard, 8);
+            DrawRoundedPanel(_operationCard);
+            _mainContainer.Controls.Add(_operationCard);
 
             // 录制按钮（参考Apple设计：按钮间距和颜色，确保不超出卡片）
             _recordButton = new Button
@@ -160,18 +179,17 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（居中，与录制组件同宽，参考Apple设计：行间距充足，自适应高度）
+            // 定时运行卡片（在主容器内，操作卡片下方，水平居中）
             _scheduleCard = new Panel
             {
                 Size = new Size(cardWidth, 60), // 默认关闭状态60px，开启后动态调整
                 BackColor = Color.FromArgb(248, 248, 248), // Apple浅灰背景
-                Anchor = AnchorStyles.None  // 不使用Anchor，使用居中定位，确保与操作卡片对齐
+                Location = new Point((containerWidth - cardWidth) / 2, 200) // 水平居中，操作卡片下方
             };
-            // 居中计算将在Resize事件中处理
-            CenterCard(_scheduleCard, 210);
-            DrawRoundedPanel(_scheduleCard, 8);
+            DrawRoundedPanel(_scheduleCard);
+            _mainContainer.Controls.Add(_scheduleCard);
             
-            // 监听窗口大小变化，重新居中卡片
+            // 监听窗口大小变化，重新居中主容器
             this.Resize += MainForm_Resize;
 
             // 开关和标签（始终显示，参考Apple设计：增加行间距）
@@ -180,7 +198,7 @@ namespace AutoDaily.UI.Forms
                 Location = new Point(20, 18), // 从15增加到20，增加左边距
                 Checked = false
             };
-            _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged;
+            _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged_UI; // 只更新UI，不生效
 
             _scheduleTimeLabel = new Label
             {
@@ -215,7 +233,25 @@ namespace AutoDaily.UI.Forms
                 Visible = false
             };
             _timePicker.Value = DateTime.Today.AddHours(9);
-            _timePicker.ValueChanged += TimePicker_ValueChanged;
+            _timePicker.ValueChanged += TimePicker_ValueChanged_UI; // 只更新UI，不生效
+
+            // 保存按钮（开启定时运行后显示）
+            _saveScheduleButton = new Button
+            {
+                Name = "ScheduleTimeConfig",
+                Text = "💾 保存",
+                Size = new Size(80, 32),
+                Location = new Point(160, 57), // 时间选择器右侧
+                Font = new Font("Microsoft YaHei", FONT_SIZE_BUTTON, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(0, 122, 255), // Apple蓝色
+                Cursor = Cursors.Hand,
+                Visible = false
+            };
+            _saveScheduleButton.FlatAppearance.BorderSize = 0;
+            _saveScheduleButton.Click += SaveScheduleButton_Click;
+            DrawRoundedButton(_saveScheduleButton, 6);
 
             _nextRunLabel = new Label
             {
@@ -247,12 +283,12 @@ namespace AutoDaily.UI.Forms
             _scheduleCard.Controls.Add(_scheduleTimeLabel);
             _scheduleCard.Controls.Add(scheduleLabel);
             _scheduleCard.Controls.Add(_timePicker);
+            _scheduleCard.Controls.Add(_saveScheduleButton);
             _scheduleCard.Controls.Add(_nextRunLabel);
             _scheduleCard.Controls.Add(scheduleHintLabel);
 
-            Controls.Add(_statusIndicator);
-            Controls.Add(_operationCard);
-            Controls.Add(_scheduleCard);
+            // 将主容器添加到窗口
+            Controls.Add(_mainContainer);
         }
 
         private void InitializeServices()
@@ -306,9 +342,14 @@ namespace AutoDaily.UI.Forms
         {
             var task = _taskService.GetCurrentTask();
             
-            // 更新UI
+            // 更新UI（先取消事件，避免触发）
+            _scheduleToggle.CheckedChanged -= ScheduleToggle_CheckedChanged_UI;
             _scheduleToggle.Checked = task.Schedule.Enabled;
+            _scheduleToggle.CheckedChanged += ScheduleToggle_CheckedChanged_UI;
+            
+            _timePicker.ValueChanged -= TimePicker_ValueChanged_UI;
             _timePicker.Value = DateTime.Today.AddHours(task.Schedule.Hour).AddMinutes(task.Schedule.Minute);
+            _timePicker.ValueChanged += TimePicker_ValueChanged_UI;
             
             // 根据开关状态显示/隐藏配置项
             bool isEnabled = task.Schedule.Enabled;
@@ -337,11 +378,13 @@ namespace AutoDaily.UI.Forms
                 _scheduleCard.Size = new Size(cardWidth, 60);
             }
             
-            // 重新居中卡片
-            CenterCard(_scheduleCard, 210);
-            
             // 重新绘制圆角区域，确保内容不被裁剪
-            DrawRoundedPanel(_scheduleCard, 8);
+            DrawRoundedPanel(_scheduleCard);
+            
+            // 更新主容器高度并重新居中
+            UpdateMainContainerSize();
+            CenterContainerControls();
+            CenterMainContainer();
             
             UpdateRunButtonState();
             UpdateNextRunTime();
@@ -560,15 +603,11 @@ namespace AutoDaily.UI.Forms
             }
         }
 
-        private void ScheduleToggle_CheckedChanged(object sender, EventArgs e)
+        /// <summary>
+        /// 定时开关变化（只更新UI，不生效）
+        /// </summary>
+        private void ScheduleToggle_CheckedChanged_UI(object sender, EventArgs e)
         {
-            var task = _taskService.GetCurrentTask();
-            task.Schedule.Enabled = _scheduleToggle.Checked;
-            _taskService.UpdateCurrentTask(task);
-            
-            // 设置开机自启
-            _scheduleService.SetStartup(_scheduleToggle.Checked);
-            
             // 根据开关状态显示/隐藏配置项
             bool isEnabled = _scheduleToggle.Checked;
             foreach (Control ctrl in _scheduleCard.Controls)
@@ -596,22 +635,56 @@ namespace AutoDaily.UI.Forms
                 _scheduleCard.Size = new Size(cardWidth, 60);
             }
             
-            // 重新居中卡片
-            CenterCard(_scheduleCard, 210);
-            
             // 重新绘制圆角区域，确保内容不被裁剪
-            DrawRoundedPanel(_scheduleCard, 8);
+            DrawRoundedPanel(_scheduleCard);
             
-            UpdateNextRunTime();
+            // 更新主容器高度并重新居中
+            UpdateMainContainerSize();
+            CenterContainerControls();
+            CenterMainContainer();
         }
 
-        private void TimePicker_ValueChanged(object sender, EventArgs e)
+        /// <summary>
+        /// 时间选择器变化（只更新UI，不生效）
+        /// </summary>
+        private void TimePicker_ValueChanged_UI(object sender, EventArgs e)
+        {
+            // 只更新UI显示，不保存到任务
+        }
+
+        /// <summary>
+        /// 保存按钮点击：保存定时配置并生效
+        /// </summary>
+        private void SaveScheduleButton_Click(object sender, EventArgs e)
         {
             var task = _taskService.GetCurrentTask();
+            task.Schedule.Enabled = _scheduleToggle.Checked;
             task.Schedule.Hour = _timePicker.Value.Hour;
             task.Schedule.Minute = _timePicker.Value.Minute;
             _taskService.UpdateCurrentTask(task);
+            
+            // 设置开机自启
+            _scheduleService.SetStartup(_scheduleToggle.Checked);
+            
+            // 更新下次运行时间显示
             UpdateNextRunTime();
+            
+            // 显示保存成功提示
+            _statusIndicator.Text = "✅ 已保存";
+            _statusIndicator.ForeColor = Color.FromArgb(76, 175, 80);
+            
+            // 2秒后恢复状态
+            System.Threading.Tasks.Task.Delay(2000).ContinueWith(t =>
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(new System.Action(() =>
+                    {
+                        _statusIndicator.Text = "🟢 就绪";
+                        _statusIndicator.ForeColor = Color.FromArgb(76, 175, 80);
+                    }));
+                }
+            });
         }
 
         private void OnScheduledTaskTriggered(AutoDaily.Core.Models.Task task)
@@ -752,29 +825,81 @@ namespace AutoDaily.UI.Forms
             base.OnFormClosing(e);
         }
 
-        private void CenterCard(Panel card, int top)
+        /// <summary>
+        /// 更新主容器大小：根据内容动态调整高度
+        /// </summary>
+        private void UpdateMainContainerSize()
         {
-            // 居中卡片
-            int cardWidth = card.Width;
+            if (_mainContainer == null || _scheduleCard == null || _operationCard == null) return;
+            
+            // 计算所需高度：状态指示(60) + 操作卡片(120) + 间距(20) + 定时卡片(动态) + 底部边距(20)
+            int scheduleCardHeight = _scheduleCard.Height;
+            int containerHeight = 60 + 120 + 20 + scheduleCardHeight + 20;
+            
+            _mainContainer.Size = new Size(_mainContainer.Width, containerHeight);
+        }
+
+        /// <summary>
+        /// 居中主容器：在主窗口中上下左右居中
+        /// </summary>
+        private void CenterMainContainer()
+        {
+            if (_mainContainer == null) return;
+            
             int windowWidth = this.ClientSize.Width;
-            card.Location = new Point((windowWidth - cardWidth) / 2, top);
+            int windowHeight = this.ClientSize.Height;
+            int containerWidth = _mainContainer.Width;
+            int containerHeight = _mainContainer.Height;
+            
+            // 计算居中位置
+            int x = (windowWidth - containerWidth) / 2;
+            int y = (windowHeight - containerHeight) / 2;
+            
+            _mainContainer.Location = new Point(x, y);
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
         {
-            // 窗口大小改变时，重新居中卡片
-            if (_operationCard != null)
+            // 窗口大小改变时，重新居中主容器和内部组件
+            if (_mainContainer != null)
             {
-                CenterCard(_operationCard, 70);
-            }
-            if (_scheduleCard != null)
-            {
-                int top = _scheduleCard.Location.Y;
-                CenterCard(_scheduleCard, top);
+                // 确保主容器内的组件水平居中
+                CenterContainerControls();
+                // 重新居中主容器
+                CenterMainContainer();
             }
         }
 
-        private void DrawRoundedPanel(Panel panel, int radius)
+        /// <summary>
+        /// 居中主容器内的所有组件（水平居中）
+        /// </summary>
+        private void CenterContainerControls()
+        {
+            if (_mainContainer == null) return;
+            
+            int containerWidth = _mainContainer.Width;
+            int cardWidth = 300;
+            
+            // 居中状态指示器
+            if (_statusIndicator != null)
+            {
+                _statusIndicator.Location = new Point((containerWidth - _statusIndicator.Width) / 2, _statusIndicator.Location.Y);
+            }
+            
+            // 居中操作卡片
+            if (_operationCard != null)
+            {
+                _operationCard.Location = new Point((containerWidth - cardWidth) / 2, _operationCard.Location.Y);
+            }
+            
+            // 居中定时卡片
+            if (_scheduleCard != null)
+            {
+                _scheduleCard.Location = new Point((containerWidth - cardWidth) / 2, _scheduleCard.Location.Y);
+            }
+        }
+
+        private void DrawRoundedPanel(Panel panel, int radius = 8)
         {
             var path = new GraphicsPath();
             path.AddArc(0, 0, radius * 2, radius * 2, 180, 90);
