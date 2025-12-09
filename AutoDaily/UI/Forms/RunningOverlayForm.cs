@@ -37,21 +37,21 @@ namespace AutoDaily.UI.Forms
             Size = new Size(180, 60);
             TopMost = true;
             ShowInTaskbar = false;
-            BackColor = Color.Transparent; // 透明背景
+            // 修复：WinForms Form不支持透明背景色，使用不透明背景
+            BackColor = Color.FromArgb(240, 240, 240); // 浅灰色背景
             StartPosition = FormStartPosition.Manual;
             // 放在屏幕右下角（业界常见位置，不遮挡操作）
             Location = new Point(
                 Screen.PrimaryScreen.WorkingArea.Right - Width - 10,
                 Screen.PrimaryScreen.WorkingArea.Bottom - Height - 10);
-            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.DoubleBuffer, true);
             
-            // HUD面板（精简小窗口，半透明）
+            // HUD面板（精简小窗口）
             var panel = new Panel
             {
                 Size = new Size(Width, Height),
                 Location = new Point(0, 0),
-                BackColor = Color.FromArgb(240, 240, 240, 240) // 半透明白色
+                BackColor = Color.FromArgb(240, 240, 240) // 浅灰色背景
             };
 
             // 圆角

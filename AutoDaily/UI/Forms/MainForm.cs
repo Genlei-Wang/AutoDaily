@@ -99,24 +99,24 @@ namespace AutoDaily.UI.Forms
             // 居中计算将在Resize事件中处理
             CenterMainContainer();
 
-            // 状态指示灯（在主容器内，顶部居中）
+            // 状态指示灯（在主容器内，顶部靠左）
             _statusIndicator = new Label
             {
                 Text = "🟢 就绪",
                 Font = new Font("Microsoft YaHei", FONT_SIZE_TITLE, FontStyle.Bold),
                 ForeColor = Color.FromArgb(76, 175, 80), // Apple绿色
-                Location = new Point((containerWidth - 100) / 2, 20), // 水平居中
+                Location = new Point(20, 20), // 靠左对齐
                 AutoSize = true
             };
             _mainContainer.Controls.Add(_statusIndicator);
 
-            // 核心操作区卡片（在主容器内，状态指示灯下方）
+            // 核心操作区卡片（在主容器内，靠上，水平居中）
             int cardWidth = 300; // 卡片宽度
             _operationCard = new Panel
             {
                 Size = new Size(cardWidth, 120),
                 BackColor = Color.White,
-                Location = new Point((containerWidth - cardWidth) / 2, 60) // 水平居中，状态指示灯下方
+                Location = new Point((containerWidth - cardWidth) / 2, 20) // 水平居中，靠上（与状态同一层级）
             };
             DrawRoundedPanel(_operationCard);
             _mainContainer.Controls.Add(_operationCard);
@@ -179,12 +179,12 @@ namespace AutoDaily.UI.Forms
             _operationCard.Controls.Add(_runButton);
             _operationCard.Controls.Add(runHint);
 
-            // 定时运行卡片（在主容器内，操作卡片下方，水平居中）
+            // 定时运行卡片（在主容器内，操作卡片下方，水平居中，靠上）
             _scheduleCard = new Panel
             {
                 Size = new Size(cardWidth, 60), // 默认关闭状态60px，开启后动态调整
                 BackColor = Color.FromArgb(248, 248, 248), // Apple浅灰背景
-                Location = new Point((containerWidth - cardWidth) / 2, 200) // 水平居中，操作卡片下方
+                Location = new Point((containerWidth - cardWidth) / 2, 150) // 水平居中，操作卡片下方，靠上
             };
             DrawRoundedPanel(_scheduleCard);
             _mainContainer.Controls.Add(_scheduleCard);
@@ -832,15 +832,16 @@ namespace AutoDaily.UI.Forms
         {
             if (_mainContainer == null || _scheduleCard == null || _operationCard == null) return;
             
-            // 计算所需高度：状态指示(60) + 操作卡片(120) + 间距(20) + 定时卡片(动态) + 底部边距(20)
+            // 计算所需高度：状态指示(60) + 操作卡片(120) + 间距(10) + 定时卡片(动态) + 底部边距(20)
+            // 优化：靠上布局，减少间距
             int scheduleCardHeight = _scheduleCard.Height;
-            int containerHeight = 60 + 120 + 20 + scheduleCardHeight + 20;
+            int containerHeight = 60 + 120 + 10 + scheduleCardHeight + 20;
             
             _mainContainer.Size = new Size(_mainContainer.Width, containerHeight);
         }
 
         /// <summary>
-        /// 居中主容器：在主窗口中上下左右居中
+        /// 居中主容器：在主窗口中水平居中，垂直靠上
         /// </summary>
         private void CenterMainContainer()
         {
@@ -851,9 +852,9 @@ namespace AutoDaily.UI.Forms
             int containerWidth = _mainContainer.Width;
             int containerHeight = _mainContainer.Height;
             
-            // 计算居中位置
+            // 计算位置：水平居中，垂直靠上（距离顶部60px）
             int x = (windowWidth - containerWidth) / 2;
-            int y = (windowHeight - containerHeight) / 2;
+            int y = 60; // 靠上，距离顶部60px
             
             _mainContainer.Location = new Point(x, y);
         }
@@ -871,7 +872,7 @@ namespace AutoDaily.UI.Forms
         }
 
         /// <summary>
-        /// 居中主容器内的所有组件（水平居中）
+        /// 居中主容器内的所有组件（状态靠左，卡片水平居中）
         /// </summary>
         private void CenterContainerControls()
         {
@@ -880,10 +881,10 @@ namespace AutoDaily.UI.Forms
             int containerWidth = _mainContainer.Width;
             int cardWidth = 300;
             
-            // 居中状态指示器
+            // 状态指示器靠左（不居中）
             if (_statusIndicator != null)
             {
-                _statusIndicator.Location = new Point((containerWidth - _statusIndicator.Width) / 2, _statusIndicator.Location.Y);
+                _statusIndicator.Location = new Point(20, _statusIndicator.Location.Y);
             }
             
             // 居中操作卡片
